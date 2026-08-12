@@ -14,10 +14,10 @@ import textwrap
 
 import yaml
 
-ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-COMMAND_HEADING = re.compile(r"(Available Commands:|Commands\s*$|Commands\s*[─╮])")
-SUBCOMMAND = re.compile(r"^[│|]?\s{0,4}([a-z][a-z0-9-]{1,30})\s{2,}\S")
-CHAINING = re.compile(r"[;&|`]|\$\(|>>|(?<![0-9])>")
+ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
+COMMAND_HEADING = re.compile(r'(Available Commands:|Commands\s*$|Commands\s*[─╮])')
+SUBCOMMAND = re.compile(r'^[│|]?\s{0,4}([a-z][a-z0-9-]{1,30})\s{2,}\S')
+CHAINING = re.compile(r'[;&|`]|\$\(|>>|(?<![0-9])>')
 
 TAPE_SCHEMA = """\
 name: <2-4 word page name, title case>
@@ -39,16 +39,14 @@ steps:
 
 
 def strip_ansi(text: str) -> str:
-    return ANSI.sub("", text)
+    return ANSI.sub('', text)
 
 
 def run_help(argv: list[str]) -> str:
     try:
-        result = subprocess.run(
-            argv + ["--help"], capture_output=True, text=True, timeout=20, check=False
-        )
+        result = subprocess.run(argv + ['--help'], capture_output=True, text=True, timeout=20, check=False)
     except (OSError, subprocess.TimeoutExpired):
-        return ""
+        return ''
     return strip_ansi(result.stdout or result.stderr)
 
 
@@ -61,7 +59,7 @@ def extract_subcommands(help_text: str) -> list[str]:
             continue
         if not inside:
             continue
-        if line.strip().startswith("╰") or re.match(r"^\s*(Flags|Options|Usage)", line):
+        if line.strip().startswith('╰') or re.match(r'^\s*(Flags|Options|Usage)', line):
             inside = False
             continue
         match = SUBCOMMAND.match(line)
@@ -88,25 +86,25 @@ def gather_help(cli: str, budget: int) -> str:
         text = run_help(path)
         if not text.strip():
             continue
-        block = f"$ {' '.join(path)} --help\n{text.rstrip()}\n"
+        block = f'$ {" ".join(path)} --help\n{text.rstrip()}\n'
         collected.append(block)
         spent += len(block)
 
         if len(path) < 4:
             queue.extend(path + [name] for name in extract_subcommands(text))
 
-    print(f"  read {len(collected)} help pages ({spent} chars)", file=sys.stderr)
-    return "\n".join(collected)
+    print(f'  read {len(collected)} help pages ({spent} chars)', file=sys.stderr)
+    return '\n'.join(collected)
 
 
 def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) -> str:
     sandbox_rule = (
-        "Set `sandbox: xdg` on this tape."
+        'Set `sandbox: xdg` on this tape.'
         if force_sandbox
         else (
-            "Set `sandbox: xdg` if ANY step creates, edits or deletes data — that "
-            "redirects the XDG roots to a throwaway directory. Use `sandbox: none` "
-            "only when every step is purely a read."
+            'Set `sandbox: xdg` if ANY step creates, edits or deletes data — that '
+            'redirects the XDG roots to a throwaway directory. Use `sandbox: none` '
+            'only when every step is purely a read.'
         )
     )
 
@@ -139,7 +137,7 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
         """)
 
     result = subprocess.run(
-        ["claude", "-p", "--allowedTools", ""],
+        ['claude', '-p', '--allowedTools', ''],
         input=prompt,
         capture_output=True,
         text=True,
@@ -147,13 +145,13 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
         check=False,
     )
     if result.returncode != 0:
-        raise SystemExit(f"claude failed: {result.stderr.strip()}")
+        raise SystemExit(f'claude failed: {result.stderr.strip()}')
     return result.stdout.strip()
 
 
 def clean_yaml(raw: str) -> str:
-    if "```" in raw:
-        blocks = re.findall(r"```(?:ya?ml)?\n(.*?)```", raw, re.DOTALL)
+    if '```' in raw:
+        blocks = re.findall(r'```(?:ya?ml)?\n(.*?)```', raw, re.DOTALL)
         if blocks:
             return blocks[0]
     return raw
@@ -161,13 +159,13 @@ def clean_yaml(raw: str) -> str:
 
 def validate_tape(text: str, cli: str) -> dict:
     tape = yaml.safe_load(text)
-    if not isinstance(tape, dict) or "steps" not in tape:
-        raise SystemExit("model did not return a tape")
+    if not isinstance(tape, dict) or 'steps' not in tape:
+        raise SystemExit('model did not return a tape')
 
-    for step in tape["steps"]:
-        command = step.get("run", "")
+    for step in tape['steps']:
+        command = step.get('run', '')
         if CHAINING.search(command):
-            raise SystemExit(f"refusing chained or redirecting command: {command}")
+            raise SystemExit(f'refusing chained or redirecting command: {command}')
         if command.split()[:1] != [cli]:
-            raise SystemExit(f"refusing command that is not {cli}: {command}")
+            raise SystemExit(f'refusing command that is not {cli}: {command}')
     return tape

@@ -22,33 +22,33 @@ from pathlib import Path
 import pyte
 import yaml
 
-PROMPT = "\x1b[32m❯\x1b[0m "
+PROMPT = '\x1b[32m❯\x1b[0m '
 
-GHOSTTY_THEME = Path.home() / ".config/ghostty/themes/current.conf"
-ANSI_NAMES = ("black", "red", "green", "brown", "blue", "magenta", "cyan", "white")
+GHOSTTY_THEME = Path.home() / '.config/ghostty/themes/current.conf'
+ANSI_NAMES = ('black', 'red', 'green', 'brown', 'blue', 'magenta', 'cyan', 'white')
 
 
 def load_terminal_theme() -> tuple[dict[str, str], str, str, list[str]]:
     """Read the palette the terminal is actually using, so a recording looks like
     the shell it was taken from and follows `theme apply` without being re-cut."""
     swatches: dict[int, str] = {}
-    foreground, background = "#d5d8e2", "#191b22"
+    foreground, background = '#d5d8e2', '#191b22'
 
     if GHOSTTY_THEME.exists():
         for line in GHOSTTY_THEME.read_text().splitlines():
-            key, _, value = line.partition("=")
+            key, _, value = line.partition('=')
             key, value = key.strip(), value.strip()
-            if key == "palette" and "=" in value:
-                index, _, color = value.partition("=")
+            if key == 'palette' and '=' in value:
+                index, _, color = value.partition('=')
                 swatches[int(index)] = color
-            elif key == "foreground":
+            elif key == 'foreground':
                 foreground = value
-            elif key == "background":
+            elif key == 'background':
                 background = value
 
     ansi = [swatches.get(index, foreground) for index in range(16)]
     palette = {name: ansi[index] for index, name in enumerate(ANSI_NAMES)}
-    palette["yellow"] = palette["brown"]
+    palette['yellow'] = palette['brown']
     return palette, foreground, background, ansi
 
 
@@ -57,25 +57,23 @@ PALETTE, FOREGROUND, BACKGROUND, ANSI = load_terminal_theme()
 try:
     from pyte.graphics import FG_BG_256
 
-    PYTE_256_TO_THEME = {
-        FG_BG_256[index]: ANSI[index].lstrip("#") for index in range(16)
-    }
+    PYTE_256_TO_THEME = {FG_BG_256[index]: ANSI[index].lstrip('#') for index in range(16)}
 except (ImportError, AttributeError, IndexError):
     PYTE_256_TO_THEME = {}
 
 
-GHOSTTY_FONT = Path.home() / ".config/ghostty/fonts/current.conf"
+GHOSTTY_FONT = Path.home() / '.config/ghostty/fonts/current.conf'
 
 
 def load_terminal_font() -> tuple[str, int]:
-    family, size = "monospace", 13
+    family, size = 'monospace', 13
     if GHOSTTY_FONT.exists():
         for line in GHOSTTY_FONT.read_text().splitlines():
-            key, _, value = line.partition("=")
+            key, _, value = line.partition('=')
             key, value = key.strip(), value.strip().strip('"')
-            if key == "font-family":
+            if key == 'font-family':
                 family = value
-            elif key == "font-size":
+            elif key == 'font-size':
                 size = int(float(value))
     return family, size
 
@@ -84,10 +82,10 @@ FONT_FAMILY, FONT_SIZE = load_terminal_font()
 
 
 def resolve_font_file(family: str, bold: bool) -> Path | None:
-    query = f"{family}:bold" if bold else family
+    query = f'{family}:bold' if bold else family
     try:
         result = subprocess.run(
-            ["fc-match", "-f", "%{file}", query],
+            ['fc-match', '-f', '%{file}', query],
             capture_output=True,
             text=True,
             check=True,
@@ -104,22 +102,24 @@ def embed_font(path: Path, codepoints: set[int]) -> str | None:
     import base64
     import io
 
-    from fontTools.subset import Options, Subsetter
-    from fontTools.ttLib import TTFont, TTLibError
+    from fontTools.subset import Options
+    from fontTools.subset import Subsetter
+    from fontTools.ttLib import TTFont
+    from fontTools.ttLib import TTLibError
 
     try:
         font = TTFont(path)
         options = Options()
-        options.drop_tables += ["FFTM", "PfEd"]
+        options.drop_tables += ['FFTM', 'PfEd']
         subsetter = Subsetter(options=options)
         subsetter.populate(unicodes=codepoints)
         subsetter.subset(font)
-        font.flavor = "woff2"
+        font.flavor = 'woff2'
         buffer = io.BytesIO()
         font.save(buffer)
         return base64.b64encode(buffer.getvalue()).decode()
     except (TTLibError, OSError, ValueError, KeyError) as error:
-        print(f"  font subset failed for {path.name}: {error}", file=sys.stderr)
+        print(f'  font subset failed for {path.name}: {error}', file=sys.stderr)
         return None
 
 
@@ -134,8 +134,8 @@ def font_face_rules(codepoints: set[int]) -> tuple[str, str]:
             continue
         faces.append(
             f"@font-face {{ font-family: 'RecordedTerminal';"
-            f" font-weight: {700 if bold else 400}; font-style: normal;"
-            f" font-display: block;"
+            f' font-weight: {700 if bold else 400}; font-style: normal;'
+            f' font-display: block;'
             f" src: url(data:font/woff2;base64,{encoded}) format('woff2'); }}"
         )
     stack = (
@@ -143,29 +143,29 @@ def font_face_rules(codepoints: set[int]) -> tuple[str, str]:
         if faces
         else "ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace"
     )
-    return "\n".join(faces), stack
+    return '\n'.join(faces), stack
 
 
-PRECOMMANDS = {"sudo", "doas", "env", "command", "nohup", "time", "exec", "builtin"}
+PRECOMMANDS = {'sudo', 'doas', 'env', 'command', 'nohup', 'time', 'exec', 'builtin'}
 RESERVED_WORDS = {
-    "if",
-    "then",
-    "else",
-    "elif",
-    "fi",
-    "for",
-    "while",
-    "until",
-    "do",
-    "done",
-    "case",
-    "esac",
-    "select",
-    "function",
-    "repeat",
-    "coproc",
+    'if',
+    'then',
+    'else',
+    'elif',
+    'fi',
+    'for',
+    'while',
+    'until',
+    'do',
+    'done',
+    'case',
+    'esac',
+    'select',
+    'function',
+    'repeat',
+    'coproc',
 }
-SGR_CODES = {"red": "31", "green": "32", "yellow": "33", "bold": "1", "underline": "4"}
+SGR_CODES = {'red': '31', 'green': '32', 'yellow': '33', 'bold': '1', 'underline': '4'}
 
 
 def scan_tokens(command: str) -> list[tuple[str, str]]:
@@ -177,29 +177,25 @@ def scan_tokens(command: str) -> list[tuple[str, str]]:
         if character.isspace():
             while index < length and command[index].isspace():
                 index += 1
-            kind = "space"
-        elif character in "'\"":
+            kind = 'space'
+        elif character in '\'"':
             index += 1
             while index < length and command[index] != character:
-                index += 2 if command[index] == "\\" else 1
+                index += 2 if command[index] == '\\' else 1
             index = min(index + 1, length)
-            kind = "quoted"
-        elif character in "|&;":
-            while index < length and command[index] in "|&;":
+            kind = 'quoted'
+        elif character in '|&;':
+            while index < length and command[index] in '|&;':
                 index += 1
-            kind = "separator"
-        elif character in "<>":
-            while index < length and command[index] in "<>":
+            kind = 'separator'
+        elif character in '<>':
+            while index < length and command[index] in '<>':
                 index += 1
-            kind = "redirect"
+            kind = 'redirect'
         else:
-            while (
-                index < length
-                and not command[index].isspace()
-                and command[index] not in "|&;<>'\""
-            ):
+            while index < length and not command[index].isspace() and command[index] not in '|&;<>\'"':
                 index += 1
-            kind = "word"
+            kind = 'word'
         tokens.append((command[start:index], kind))
     return tokens
 
@@ -214,37 +210,37 @@ def highlight_command(command: str) -> list[tuple[str, str]]:
     at_command_position = True
 
     for text, kind in scan_tokens(command):
-        if kind == "space":
-            style = "none"
-        elif kind == "quoted" or kind == "redirect":
-            style = "fg=yellow"
-        elif kind == "separator":
-            style = "none"
+        if kind == 'space':
+            style = 'none'
+        elif kind == 'quoted' or kind == 'redirect':
+            style = 'fg=yellow'
+        elif kind == 'separator':
+            style = 'none'
             at_command_position = True
         elif at_command_position:
             if text in RESERVED_WORDS:
-                style = "fg=yellow"
+                style = 'fg=yellow'
             elif text in PRECOMMANDS:
-                style = "fg=green,underline"
+                style = 'fg=green,underline'
             elif shutil.which(text):
-                style = "fg=green"
+                style = 'fg=green'
                 at_command_position = False
             else:
-                style = "fg=red,bold"
+                style = 'fg=red,bold'
                 at_command_position = False
         elif Path(os.path.expanduser(text)).exists():
-            style = "underline"
+            style = 'underline'
         else:
-            style = "none"
+            style = 'none'
         spans.append((text, style))
     return spans
 
 
 def to_sgr(style: str) -> str:
-    if style == "none":
-        return "\x1b[0m"
-    codes = [SGR_CODES[part.removeprefix("fg=")] for part in style.split(",")]
-    return "\x1b[0m\x1b[" + ";".join(codes) + "m"
+    if style == 'none':
+        return '\x1b[0m'
+    codes = [SGR_CODES[part.removeprefix('fg=')] for part in style.split(',')]
+    return '\x1b[0m\x1b[' + ';'.join(codes) + 'm'
 
 
 @dataclass
@@ -274,24 +270,24 @@ def load_tape(path: Path) -> Tape:
     raw = yaml.safe_load(path.read_text())
     steps = [
         Step(
-            command=entry["run"],
-            narration=entry.get("narrate", ""),
-            pause=float(entry.get("pause", 1.5)),
+            command=entry['run'],
+            narration=entry.get('narrate', ''),
+            pause=float(entry.get('pause', 1.5)),
         )
-        for entry in raw["steps"]
+        for entry in raw['steps']
     ]
     return Tape(
-        name=raw.get("name", raw["title"]),
-        title=raw["title"],
-        description=raw.get("description", "").strip(),
-        tags=raw.get("tags", []),
-        cli=raw.get("cli", ""),
-        sandbox=raw.get("sandbox", "none"),
-        columns=int(raw.get("columns", 100)),
-        rows=int(raw.get("rows", 24)),
-        typing_speed=float(raw.get("typing_speed", 0.035)),
-        max_gap=float(raw.get("max_gap", 1.2)),
-        env={key: str(value) for key, value in (raw.get("env") or {}).items()},
+        name=raw.get('name', raw['title']),
+        title=raw['title'],
+        description=raw.get('description', '').strip(),
+        tags=raw.get('tags', []),
+        cli=raw.get('cli', ''),
+        sandbox=raw.get('sandbox', 'none'),
+        columns=int(raw.get('columns', 100)),
+        rows=int(raw.get('rows', 24)),
+        typing_speed=float(raw.get('typing_speed', 0.035)),
+        max_gap=float(raw.get('max_gap', 1.2)),
+        env={key: str(value) for key, value in (raw.get('env') or {}).items()},
         steps=steps,
     )
 
@@ -301,21 +297,21 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
     XDG roots sandboxes any of them without the recorder knowing what it is."""
     environment = dict(os.environ)
     environment.update(
-        TERM="xterm-256color",
+        TERM='xterm-256color',
         COLUMNS=str(tape.columns),
         LINES=str(tape.rows),
-        NO_COLOR="",
-        FORCE_COLOR="1",
-        PS1="",
+        NO_COLOR='',
+        FORCE_COLOR='1',
+        PS1='',
     )
-    environment.pop("NO_COLOR")
+    environment.pop('NO_COLOR')
 
-    if tape.sandbox == "xdg":
+    if tape.sandbox == 'xdg':
         for variable, leaf in (
-            ("XDG_DATA_HOME", "data"),
-            ("XDG_CONFIG_HOME", "config"),
-            ("XDG_STATE_HOME", "state"),
-            ("XDG_CACHE_HOME", "cache"),
+            ('XDG_DATA_HOME', 'data'),
+            ('XDG_CONFIG_HOME', 'config'),
+            ('XDG_STATE_HOME', 'state'),
+            ('XDG_CACHE_HOME', 'cache'),
         ):
             directory = sandbox_root / leaf
             directory.mkdir(parents=True, exist_ok=True)
@@ -325,14 +321,12 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
     return environment
 
 
-def execute_in_pty(
-    command: str, environment: dict[str, str], columns: int, rows: int
-) -> list[tuple[float, bytes]]:
+def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows: int) -> list[tuple[float, bytes]]:
     master, slave = pty.openpty()
     termios.tcsetattr(slave, termios.TCSANOW, termios.tcgetattr(slave))
     import fcntl
 
-    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, columns, 0, 0))
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', rows, columns, 0, 0))
 
     process = subprocess.Popen(
         command,
@@ -378,9 +372,7 @@ def execute_in_pty(
     return events
 
 
-def record_tape(
-    tape: Tape, sandbox_root: Path
-) -> tuple[list[tuple[float, bytes]], list[tuple[float, float, str, str]]]:
+def record_tape(tape: Tape, sandbox_root: Path) -> tuple[list[tuple[float, bytes]], list[tuple[float, float, str, str]]]:
     environment = build_environment(tape, sandbox_root)
     cast: list[tuple[float, bytes]] = []
     narration_track: list[tuple[float, float, str, str]] = []
@@ -395,13 +387,13 @@ def record_tape(
             pending = to_sgr(style)
             for character in text:
                 cast.append((clock, (pending + character).encode()))
-                pending = ""
+                pending = ''
                 clock += tape.typing_speed
         clock += 0.35
-        cast.append((clock, b"\x1b[0m\r\n"))
+        cast.append((clock, b'\x1b[0m\r\n'))
         clock += 0.1
 
-        print(f"  running: {step.command}", file=sys.stderr)
+        print(f'  running: {step.command}', file=sys.stderr)
         output = execute_in_pty(step.command, environment, tape.columns, tape.rows)
 
         previous_offset = 0.0
@@ -411,18 +403,16 @@ def record_tape(
             cast.append((clock, chunk))
 
         clock += step.pause
-        cast.append((clock, b"\r\n"))
+        cast.append((clock, b'\r\n'))
         narration_track.append((narration_start, clock, step.narration, step.command))
 
     return cast, narration_track
 
 
-def render_frames(
-    cast: list[tuple[float, bytes]], columns: int, rows: int, fps: int
-) -> list[tuple[float, list]]:
+def render_frames(cast: list[tuple[float, bytes]], columns: int, rows: int, fps: int) -> list[tuple[float, list]]:
     screen = pyte.Screen(columns, rows)
     stream = pyte.Stream(screen)
-    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
 
     frames: list[tuple[float, list]] = []
     interval = 1.0 / fps
@@ -459,7 +449,7 @@ def snapshot_screen(screen: pyte.Screen) -> list:
     for y in range(screen.lines):
         buffer_row = screen.buffer[y]
         runs: list[tuple[str, str, str, bool]] = []
-        text = ""
+        text = ''
         style: tuple[str, str, bool] | None = None
         for x in range(screen.columns):
             character = buffer_row[x]
@@ -468,7 +458,7 @@ def snapshot_screen(screen: pyte.Screen) -> list:
             if current != style:
                 if text and style is not None:
                     runs.append((text, *style))
-                text = ""
+                text = ''
                 style = current
             text += character.data
         if text and style is not None:
@@ -488,58 +478,50 @@ def resolve_colors(character) -> tuple[str, str]:
 
 
 def to_hex(color: str, fallback: str, bold: bool) -> str:
-    if color == "default":
+    if color == 'default':
         return fallback
-    if color in ANSI_NAMES or color == "yellow":
-        name = "brown" if color == "yellow" else color
+    if color in ANSI_NAMES or color == 'yellow':
+        name = 'brown' if color == 'yellow' else color
         index = ANSI_NAMES.index(name)
         return ANSI[index + 8] if bold else ANSI[index]
     color = PYTE_256_TO_THEME.get(color, color)
     if len(color) == 6:
-        return f"#{color}"
+        return f'#{color}'
     return fallback
 
 
 def mix(first: str, second: str, amount: float) -> str:
-    left = [int(first.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
-    right = [int(second.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
-    blended = [round(a + (b - a) * amount) for a, b in zip(left, right)]
-    return "#" + "".join(f"{value:02x}" for value in blended)
+    left = [int(first.lstrip('#')[i : i + 2], 16) for i in (0, 2, 4)]
+    right = [int(second.lstrip('#')[i : i + 2], 16) for i in (0, 2, 4)]
+    blended = [round(a + (b - a) * amount) for a, b in zip(left, right, strict=True)]
+    return '#' + ''.join(f'{value:02x}' for value in blended)
 
 
-def render_html(
-    tape: Tape, frames: list[tuple[float, list]], narration_track, duration: float
-) -> str:
+def render_html(tape: Tape, frames: list[tuple[float, list]], narration_track, duration: float) -> str:
     rules = []
     frame_markup = []
 
     for index, (timestamp, lines) in enumerate(frames):
         end = frames[index + 1][0] if index + 1 < len(frames) else duration
-        rules.append(keyframe_rule(f"fr{index}", timestamp, end, duration))
-        last = " last" if index == len(frames) - 1 else ""
-        body = "\n".join(render_line(runs) for runs in lines)
+        rules.append(keyframe_rule(f'fr{index}', timestamp, end, duration))
+        last = ' last' if index == len(frames) - 1 else ''
+        body = '\n'.join(render_line(runs) for runs in lines)
         frame_markup.append(f'<pre class="frame fr{index}{last}">{body}</pre>')
 
     caption_markup = []
     step_markup = []
     final = len(narration_track) - 1
     for index, (start, end, text, command) in enumerate(narration_track):
-        rules.append(keyframe_rule(f"cp{index}", start, end, duration))
-        rules.append(keyframe_rule(f"st{index}", start, end, duration, dim=0.38))
-        last = " last" if index == final else ""
-        caption_markup.append(
-            f'<p class="caption cp{index}{last}">{html.escape(text)}</p>'
-        )
-        step_markup.append(
-            f'<li class="step st{index}{last}">'
-            f'<span class="ord">{index + 1}</span>'
-            f"<code>{html.escape(command)}</code></li>"
-        )
+        rules.append(keyframe_rule(f'cp{index}', start, end, duration))
+        rules.append(keyframe_rule(f'st{index}', start, end, duration, dim=0.38))
+        last = ' last' if index == final else ''
+        caption_markup.append(f'<p class="caption cp{index}{last}">{html.escape(text)}</p>')
+        step_markup.append(f'<li class="step st{index}{last}"><span class="ord">{index + 1}</span><code>{html.escape(command)}</code></li>')
 
-    tags = "".join(f"<li>{html.escape(tag)}</li>" for tag in tape.tags)
+    tags = ''.join(f'<li>{html.escape(tag)}</li>' for tag in tape.tags)
 
     painted = {chr(code) for code in range(0x20, 0x7F)}
-    painted.update("❯…—")
+    painted.update('❯…—')
     for _, lines in frames:
         for line in lines:
             for run in line:
@@ -551,20 +533,20 @@ def render_html(
     faces, mono = font_face_rules({ord(character) for character in painted})
 
     light = (
-        f"--ground: {mix('#ffffff', BACKGROUND, 0.05)}; "
-        f"--ink: {mix(BACKGROUND, '#000000', 0.12)}; "
-        f"--muted: {mix(BACKGROUND, '#ffffff', 0.48)}; "
-        f"--rule: {mix(BACKGROUND, '#ffffff', 0.84)}; "
-        f"--accent: {mix(ANSI[2], '#000000', 0.32)}; "
-        f"--shadow: rgba(0, 0, 0, .16);"
+        f'--ground: {mix("#ffffff", BACKGROUND, 0.05)}; '
+        f'--ink: {mix(BACKGROUND, "#000000", 0.12)}; '
+        f'--muted: {mix(BACKGROUND, "#ffffff", 0.48)}; '
+        f'--rule: {mix(BACKGROUND, "#ffffff", 0.84)}; '
+        f'--accent: {mix(ANSI[2], "#000000", 0.32)}; '
+        f'--shadow: rgba(0, 0, 0, .16);'
     )
     dark = (
-        f"--ground: {mix(BACKGROUND, '#000000', 0.4)}; "
-        f"--ink: {FOREGROUND}; "
-        f"--muted: {mix(FOREGROUND, BACKGROUND, 0.45)}; "
-        f"--rule: {mix(FOREGROUND, BACKGROUND, 0.8)}; "
-        f"--accent: {ANSI[10]}; "
-        f"--shadow: rgba(0, 0, 0, .5);"
+        f'--ground: {mix(BACKGROUND, "#000000", 0.4)}; '
+        f'--ink: {FOREGROUND}; '
+        f'--muted: {mix(FOREGROUND, BACKGROUND, 0.45)}; '
+        f'--rule: {mix(FOREGROUND, BACKGROUND, 0.8)}; '
+        f'--accent: {ANSI[10]}; '
+        f'--shadow: rgba(0, 0, 0, .5);'
     )
 
     return f"""<title>{html.escape(tape.name)}</title>
@@ -672,13 +654,13 @@ h1 {{
   <div class="stage">
     <div>
       <p class="rail-title">Sequence</p>
-      <ol class="rail">{"".join(step_markup)}</ol>
+      <ol class="rail">{''.join(step_markup)}</ol>
     </div>
     <div>
       <div class="player" id="player" tabindex="0" role="button" aria-label="Pause or resume the recording">
-        <div class="screen">{"".join(frame_markup)}</div>
+        <div class="screen">{''.join(frame_markup)}</div>
       </div>
-      <div class="captions">{"".join(caption_markup)}</div>
+      <div class="captions">{''.join(caption_markup)}</div>
     </div>
   </div>
 
@@ -701,50 +683,45 @@ player.addEventListener('keydown', event => {{
 """
 
 
-def keyframe_rule(
-    name: str, start: float, end: float, duration: float, dim: float = 0.0
-) -> str:
+def keyframe_rule(name: str, start: float, end: float, duration: float, dim: float = 0.0) -> str:
     begin = max(0.0, min(100.0, start / duration * 100))
     finish = max(begin, min(100.0, end / duration * 100))
-    stops = [f"{begin:.4f}% {{ opacity: 1 }}"]
+    stops = [f'{begin:.4f}% {{ opacity: 1 }}']
     if begin > 0:
-        stops.insert(0, f"0% {{ opacity: {dim} }}")
+        stops.insert(0, f'0% {{ opacity: {dim} }}')
     if finish < 100:
-        stops.append(f"{finish:.4f}% {{ opacity: {dim} }}")
-    return f".{name} {{ animation-name: k{name}; }}\n@keyframes k{name} {{ {' '.join(stops)} }}"
+        stops.append(f'{finish:.4f}% {{ opacity: {dim} }}')
+    return f'.{name} {{ animation-name: k{name}; }}\n@keyframes k{name} {{ {" ".join(stops)} }}'
 
 
 def render_line(runs) -> str:
     if not runs:
-        return ""
+        return ''
     parts = []
     for text, foreground, background, bold in runs:
-        styles = [f"color:{foreground}"]
+        styles = [f'color:{foreground}']
         if background != BACKGROUND:
-            styles.append(f"background:{background}")
+            styles.append(f'background:{background}')
         if bold:
-            styles.append("font-weight:700")
+            styles.append('font-weight:700')
         parts.append(f'<span style="{";".join(styles)}">{html.escape(text)}</span>')
-    return "".join(parts)
+    return ''.join(parts)
 
 
 def write_asciicast(cast, tape: Tape, path: Path) -> None:
     import json
 
     header = {
-        "version": 2,
-        "width": tape.columns,
-        "height": tape.rows,
-        "title": tape.title,
-        "env": {"TERM": "xterm-256color", "SHELL": "/bin/bash"},
+        'version': 2,
+        'width': tape.columns,
+        'height': tape.rows,
+        'title': tape.title,
+        'env': {'TERM': 'xterm-256color', 'SHELL': '/bin/bash'},
     }
-    with path.open("w") as handle:
-        handle.write(json.dumps(header) + "\n")
+    with path.open('w') as handle:
+        handle.write(json.dumps(header) + '\n')
         for timestamp, chunk in cast:
-            handle.write(
-                json.dumps([round(timestamp, 4), "o", chunk.decode("utf-8", "replace")])
-                + "\n"
-            )
+            handle.write(json.dumps([round(timestamp, 4), 'o', chunk.decode('utf-8', 'replace')]) + '\n')
 
 
 def record(
@@ -756,18 +733,15 @@ def record(
 ) -> Path:
     """Execute a tape and write the watchable page beside it."""
     tape = load_tape(tape_path)
-    print(f"recording {tape.title!r} ({len(tape.steps)} steps)", file=sys.stderr)
+    print(f'recording {tape.title!r} ({len(tape.steps)} steps)', file=sys.stderr)
 
-    sandbox = sandbox_root or page_path.parent / "sandbox"
+    sandbox = sandbox_root or page_path.parent / 'sandbox'
     cast, narration_track = record_tape(tape, sandbox)
     frames = render_frames(cast, tape.columns, tape.rows, fps)
 
     offset = find_first_painted_frame(frames)
     frames = [(stamp - offset, lines) for stamp, lines in frames if stamp >= offset]
-    narration_track = [
-        (max(0.0, start - offset), end - offset, text, command)
-        for start, end, text, command in narration_track
-    ]
+    narration_track = [(max(0.0, start - offset), end - offset, text, command) for start, end, text, command in narration_track]
     duration = cast[-1][0] + 1.0 - offset
 
     page_path.write_text(render_html(tape, frames, narration_track, duration))
@@ -776,7 +750,7 @@ def record(
 
     size = page_path.stat().st_size / 1024
     print(
-        f"{len(frames)} frames, {duration:.1f}s, {size:.0f}KB -> {page_path}",
+        f'{len(frames)} frames, {duration:.1f}s, {size:.0f}KB -> {page_path}',
         file=sys.stderr,
     )
     return page_path

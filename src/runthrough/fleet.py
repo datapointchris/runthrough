@@ -15,89 +15,90 @@ import subprocess
 import sys
 import textwrap
 
-from runthrough.ask import clean_yaml, strip_ansi
+from runthrough.ask import clean_yaml
+from runthrough.ask import strip_ansi
 
 READ_COMMANDS = {
-    "awk",
-    "bat",
-    "cat",
-    "column",
-    "comm",
-    "cut",
-    "date",
-    "df",
-    "diff",
-    "du",
-    "echo",
-    "eza",
-    "fd",
-    "file",
-    "find",
-    "grep",
-    "head",
-    "hostname",
-    "jq",
-    "less",
-    "ls",
-    "nl",
-    "paste",
-    "printf",
-    "rg",
-    "sed",
-    "sort",
-    "stat",
-    "tail",
-    "tokei",
-    "tr",
-    "uname",
-    "uniq",
-    "wc",
-    "which",
-    "yq",
-    "zoxide",
+    'awk',
+    'bat',
+    'cat',
+    'column',
+    'comm',
+    'cut',
+    'date',
+    'df',
+    'diff',
+    'du',
+    'echo',
+    'eza',
+    'fd',
+    'file',
+    'find',
+    'grep',
+    'head',
+    'hostname',
+    'jq',
+    'less',
+    'ls',
+    'nl',
+    'paste',
+    'printf',
+    'rg',
+    'sed',
+    'sort',
+    'stat',
+    'tail',
+    'tokei',
+    'tr',
+    'uname',
+    'uniq',
+    'wc',
+    'which',
+    'yq',
+    'zoxide',
 }
 MUTATING_WORDS = {
-    "add",
-    "apply",
-    "chmod",
-    "chown",
-    "clean",
-    "commit",
-    "complete",
-    "create",
-    "delete",
-    "deploy",
-    "destroy",
-    "dd",
-    "drop",
-    "edit",
-    "install",
-    "kill",
-    "log",
-    "merge",
-    "mkdir",
-    "mv",
-    "new",
-    "prune",
-    "purge",
-    "push",
-    "rebase",
-    "reset",
-    "restart",
-    "rm",
-    "rmdir",
-    "set",
-    "start",
-    "stop",
-    "sync",
-    "touch",
-    "uninstall",
-    "update",
-    "upgrade",
-    "write",
+    'add',
+    'apply',
+    'chmod',
+    'chown',
+    'clean',
+    'commit',
+    'complete',
+    'create',
+    'delete',
+    'deploy',
+    'destroy',
+    'dd',
+    'drop',
+    'edit',
+    'install',
+    'kill',
+    'log',
+    'merge',
+    'mkdir',
+    'mv',
+    'new',
+    'prune',
+    'purge',
+    'push',
+    'rebase',
+    'reset',
+    'restart',
+    'rm',
+    'rmdir',
+    'set',
+    'start',
+    'stop',
+    'sync',
+    'touch',
+    'uninstall',
+    'update',
+    'upgrade',
+    'write',
 }
 FORBIDDEN = re.compile(r"(>>|(?<![0-9])>|&&|\|\||;|`|\bsudo\b|\bssh\b|-c\s+['\"])")
-LOOPS = re.compile(r"\b(for|while|until|do|done|if|then|fi|function)\b")
+LOOPS = re.compile(r'\b(for|while|until|do|done|if|then|fi|function)\b')
 
 TAPE_SCHEMA = """\
 {
@@ -122,23 +123,19 @@ def parse_tape(raw: str) -> dict:
     """JSON, not YAML: a jq filter is full of colons and quotes, which is exactly
     what a YAML plain scalar cannot hold."""
     text = clean_yaml(raw)
-    match = re.search(r"\{.*\}", text, re.DOTALL)
+    match = re.search(r'\{.*\}', text, re.DOTALL)
     if not match:
-        raise SystemExit(f"model did not return a tape:\n{raw[:400]}")
+        raise SystemExit(f'model did not return a tape:\n{raw[:400]}')
     return json.loads(match.group(0))
 
 
 def registry_roster() -> str:
-    return strip_ansi(
-        subprocess.run(
-            ["toolbox", "list"], capture_output=True, text=True, check=False
-        ).stdout
-    )
+    return strip_ansi(subprocess.run(['toolbox', 'list'], capture_output=True, text=True, check=False).stdout)
 
 
 def semantic_hits(question: str) -> str:
     result = subprocess.run(
-        ["indy", "search", question, "--owned", "-n", "8"],
+        ['indy', 'search', question, '--owned', '-n', '8'],
         capture_output=True,
         text=True,
         check=False,
@@ -148,7 +145,7 @@ def semantic_hits(question: str) -> str:
 
 def ask_model(prompt: str) -> str:
     result = subprocess.run(
-        ["claude", "-p", "--allowedTools", ""],
+        ['claude', '-p', '--allowedTools', ''],
         input=prompt,
         capture_output=True,
         text=True,
@@ -156,7 +153,7 @@ def ask_model(prompt: str) -> str:
         check=False,
     )
     if result.returncode != 0:
-        raise SystemExit(f"claude failed: {result.stderr.strip()}")
+        raise SystemExit(f'claude failed: {result.stderr.strip()}')
     return result.stdout.strip()
 
 
@@ -183,9 +180,9 @@ def route(question: str) -> list[str]:
         {semantic_hits(question)}
         """)
     raw = ask_model(prompt)
-    match = re.search(r"\[.*\]", raw, re.DOTALL)
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
-        raise SystemExit(f"router did not return a list:\n{raw}")
+        raise SystemExit(f'router did not return a list:\n{raw}')
     return [str(item) for item in json.loads(match.group(0))]
 
 
@@ -212,18 +209,18 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
         {help_text}
         """)
     raw = ask_model(prompt)
-    match = re.search(r"\[.*\]", raw, re.DOTALL)
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
-        return ""
+        return ''
 
     observations = []
     for command in json.loads(match.group(0))[:3]:
         try:
             check_command(command, allowed)
         except SystemExit as refusal:
-            print(f"  skipped probe ({refusal})", file=sys.stderr)
+            print(f'  skipped probe ({refusal})', file=sys.stderr)
             continue
-        print(f"  probing: {command}", file=sys.stderr)
+        print(f'  probing: {command}', file=sys.stderr)
         result = subprocess.run(
             command,
             shell=True,
@@ -233,8 +230,8 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
             check=False,
         )
         output = strip_ansi(result.stdout or result.stderr)[:1500]
-        observations.append(f"$ {command}\n{output.rstrip()}")
-    return "\n\n".join(observations)
+        observations.append(f'$ {command}\n{output.rstrip()}')
+    return '\n\n'.join(observations)
 
 
 def author(question: str, help_text: str, observations: str) -> str:
@@ -298,18 +295,18 @@ def split_pipeline(text: str) -> list[str]:
     stages: list[str] = []
     current: list[str] = []
     for token in lexer:
-        if token == "|":
-            stages.append(" ".join(current))
+        if token == '|':
+            stages.append(' '.join(current))
             current = []
         else:
             current.append(token)
-    stages.append(" ".join(current))
+    stages.append(' '.join(current))
     return [stage.strip() for stage in stages if stage.strip()]
 
 
 def segments(command: str) -> list[str]:
-    inner = re.findall(r"\$\((.*?)\)", command)
-    outer = re.sub(r"\$\(.*?\)", " ", command)
+    inner = re.findall(r'\$\((.*?)\)', command)
+    outer = re.sub(r'\$\(.*?\)', ' ', command)
     pieces = split_pipeline(outer)
     for nested in inner:
         pieces.extend(split_pipeline(nested))
@@ -318,24 +315,22 @@ def segments(command: str) -> list[str]:
 
 def check_command(command: str, allowed: set[str]) -> None:
     if len(command) > 160:
-        raise SystemExit(
-            f"too long to be typed by hand ({len(command)} chars): {command}"
-        )
+        raise SystemExit(f'too long to be typed by hand ({len(command)} chars): {command}')
     if FORBIDDEN.search(command) or LOOPS.search(command):
-        raise SystemExit(f"not something a person types inline: {command}")
-    if len(split_pipeline(re.sub(r"\$\(.*?\)", " ", command))) > 4:
-        raise SystemExit(f"too many pipe stages: {command}")
+        raise SystemExit(f'not something a person types inline: {command}')
+    if len(split_pipeline(re.sub(r'\$\(.*?\)', ' ', command))) > 4:
+        raise SystemExit(f'too many pipe stages: {command}')
 
     for segment in segments(command):
         words = shlex.split(segment)
         if not words:
             continue
         if words[0] not in allowed:
-            raise SystemExit(f"command not in the read-only allowlist: {words[0]}")
+            raise SystemExit(f'command not in the read-only allowlist: {words[0]}')
         for word in words[1:]:
             # Only the subcommand path is checked. `--verb apply` is a filter value,
             # not an apply, and blocking it would rule out most report queries.
-            if word.startswith("-"):
+            if word.startswith('-'):
                 break
             if word.lower() in MUTATING_WORDS:
-                raise SystemExit(f"refusing a mutating verb ({word}) in: {command}")
+                raise SystemExit(f'refusing a mutating verb ({word}) in: {command}')
