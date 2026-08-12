@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.metadata
+import json
 import platform
 import re
 import subprocess
@@ -25,6 +27,42 @@ app = typer.Typer(
 err = Console(stderr=True)
 
 DEFAULT_LIBRARY = Path.home() / '.local/share/runthrough'
+
+
+def installed_commit() -> str | None:
+    """Read the git commit from the installed dist-info. uv records it for any git
+    install, which is how the fleet installs everything."""
+    try:
+        distribution = importlib.metadata.distribution('runthrough')
+        direct_url = distribution.read_text('direct_url.json')
+        if direct_url:
+            return json.loads(direct_url).get('vcs_info', {}).get('commit_id')
+    except Exception:
+        return None
+    return None
+
+
+def _version_callback(asked: bool) -> None:
+    """`runthrough --version`, in the one line every CLI here answers it with."""
+    if not asked:
+        return
+    try:
+        version = importlib.metadata.version('runthrough')
+    except importlib.metadata.PackageNotFoundError:
+        version = 'unknown'
+    commit = installed_commit()
+    print(f'runthrough {version}{f" @ {commit[:8]}" if commit else ""}')
+    raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: Annotated[
+        bool | None,
+        typer.Option('--version', callback=_version_callback, is_eager=True, help='Show the installed version and exit.'),
+    ] = None,
+) -> None:
+    """Record what you actually typed, and what it actually printed."""
 
 
 def open_page(path: Path) -> None:
@@ -147,18 +185,36 @@ def fleet(
 @app.command(rich_help_panel='Library')
 def library(
     path: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
+    as_json: Annotated[bool, typer.Option('--json', help='Output as JSON to stdout.')] = False,
 ) -> None:
     """List the runthroughs you have recorded."""
-    tapes = sorted(path.glob('*.tape.yml'))
-    if not tapes:
-        err.print(f'nothing recorded yet in {path}')
-        raise typer.Exit(0)
-
-    for tape in tapes:
-        loaded = yaml.safe_load(tape.read_text())
+    recorded = []
+    for tape in sorted(path.glob('*.tape.yml')):
+        loaded = yaml.safe_load(tape.read_text()) or {}
         page = tape.with_name(tape.name.replace('.tape.yml', '.html'))
-        mark = '' if page.exists() else '  (no recording)'
-        print(f'{loaded.get("name", tape.stem)}  —  {loaded.get("title", "")}{mark}')
+        recorded.append(
+            {
+                'name': loaded.get('name', tape.stem),
+                'title': loaded.get('title', ''),
+                'tags': loaded.get('tags', []),
+                'steps': len(loaded.get('steps', [])),
+                'tape': str(tape),
+                'page': str(page) if page.exists() else None,
+            }
+        )
+
+    if as_json:
+        print(json.dumps(recorded))
+        return
+
+    if not recorded:
+        err.print(f'Nothing recorded yet in {path}.')
+        err.print('Record one with:  runthrough ask --cli <command> "what you want shown"')
+        return
+
+    for entry in recorded:
+        mark = '' if entry['page'] else '  (no recording)'
+        print(f'{entry["name"]}  —  {entry["title"]}{mark}')
 
 
 def main() -> None:
