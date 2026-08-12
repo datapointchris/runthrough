@@ -97,7 +97,7 @@ def gather_help(cli: str, budget: int) -> str:
     return '\n'.join(collected)
 
 
-def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) -> str:
+def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) -> dict:
     sandbox_rule = (
         'Set `sandbox: xdg` on this tape.'
         if force_sandbox
@@ -136,17 +136,41 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
         {help_text}
         """)
 
+    return request_tape(prompt)
+
+
+NUDGE = (
+    '\n\nYour entire reply must be the JSON object. It must start with `{` and end '
+    'with `}`. Do not introduce it, do not comment on it afterwards, and do not say '
+    'the work is complete — the JSON is the only thing read.'
+)
+
+
+def ask_model(prompt: str, timeout: int = 420) -> str:
+    """The one door to the model. It is never given tools: it reads help text and
+    probe output as plain text and returns a tape, and the recorder does the running."""
     result = subprocess.run(
         ['claude', '-p', '--allowedTools', ''],
         input=prompt,
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=timeout,
         check=False,
     )
     if result.returncode != 0:
         raise SystemExit(f'claude failed: {result.stderr.strip()}')
     return result.stdout.strip()
+
+
+def request_tape(prompt: str) -> dict:
+    """Ask twice before giving up. The model sometimes answers with the tape and then
+    a closing remark, and `claude -p` returns only that last message — so the JSON is
+    gone rather than malformed, and nothing in the reply can be salvaged."""
+    try:
+        return parse_tape(ask_model(prompt))
+    except SystemExit:
+        print('  no JSON in the reply, asking again', file=sys.stderr)
+        return parse_tape(ask_model(prompt + NUDGE))
 
 
 def strip_fences(raw: str) -> str:
@@ -166,8 +190,7 @@ def parse_tape(raw: str) -> dict:
     return json.loads(match.group(0))
 
 
-def validate_tape(text: str, cli: str) -> dict:
-    tape = parse_tape(text)
+def validate_tape(tape: dict, cli: str) -> dict:
     if 'steps' not in tape:
         raise SystemExit('model did not return a tape')
 

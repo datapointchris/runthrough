@@ -99,8 +99,7 @@ def ask(
     help_text = ask_module.gather_help(cli, budget)
 
     err.print('authoring tape')
-    raw = ask_module.author_tape(cli, asked, help_text, sandbox)
-    tape = ask_module.validate_tape(raw, cli)
+    tape = ask_module.validate_tape(ask_module.author_tape(cli, asked, help_text, sandbox), cli)
     if sandbox:
         tape['sandbox'] = 'xdg'
 
@@ -136,7 +135,7 @@ def fleet(
     observations = fleet_module.probe(asked, help_text, allowed)
 
     err.print('authoring')
-    tape = ask_module.parse_tape(fleet_module.author(asked, help_text, observations))
+    tape = fleet_module.author(asked, help_text, observations)
     if 'steps' not in tape:
         raise typer.BadParameter('model did not return a tape')
     for step in tape['steps']:

@@ -15,6 +15,8 @@ import subprocess
 import sys
 import textwrap
 
+from runthrough.ask import ask_model
+from runthrough.ask import request_tape
 from runthrough.ask import strip_ansi
 
 READ_COMMANDS = {
@@ -132,20 +134,6 @@ def semantic_hits(question: str) -> str:
     return strip_ansi(result.stdout)
 
 
-def ask_model(prompt: str) -> str:
-    result = subprocess.run(
-        ['claude', '-p', '--allowedTools', ''],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=420,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise SystemExit(f'claude failed: {result.stderr.strip()}')
-    return result.stdout.strip()
-
-
 def route(question: str) -> list[str]:
     prompt = textwrap.dedent(f"""\
         A person wants to answer this question at their terminal:
@@ -223,7 +211,7 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
     return '\n\n'.join(observations)
 
 
-def author(question: str, help_text: str, observations: str) -> str:
+def author(question: str, help_text: str, observations: str) -> dict:
     prompt = textwrap.dedent(f"""\
         Write a tape for a terminal recording that answers this question by actually
         investigating it:
@@ -273,7 +261,7 @@ def author(question: str, help_text: str, observations: str) -> str:
 
         {observations}
         """)
-    return ask_model(prompt)
+    return request_tape(prompt)
 
 
 def split_pipeline(text: str) -> list[str]:
