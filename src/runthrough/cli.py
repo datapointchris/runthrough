@@ -16,7 +16,8 @@ import yaml
 from rich.console import Console
 
 from runthrough import ask as ask_module
-from runthrough import fleet as fleet_module
+from runthrough import config as config_module
+from runthrough import investigate as investigate_module
 from runthrough.recorder import record
 
 app = typer.Typer(
@@ -145,7 +146,7 @@ def ask(
 
 
 @app.command(rich_help_panel='Asking')
-def fleet(
+def investigate(
     question: Annotated[list[str], typer.Argument(help='What you want answered, in English.')],
     yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
     budget: Annotated[int, typer.Option('--budget', help='Help-text characters to read.')] = 30000,
@@ -154,13 +155,17 @@ def fleet(
 ) -> None:
     """Ask a question that spans tools, and let it find which ones to use."""
     asked = ' '.join(question)
+    routing = config_module.load().routing
+    if not routing.configured:
+        err.print(config_module.ROUTING_HELP.format(path=config_module.CONFIG_PATH))
+        raise typer.Exit(1)
 
     err.print('routing')
-    paths = fleet_module.route(asked)
+    paths = investigate_module.route(asked, routing)
     err.print(f'  tools: {paths}')
 
     pages: list[str] = []
-    allowed = set(fleet_module.READ_COMMANDS)
+    allowed = set(investigate_module.READ_COMMANDS)
     for path in paths:
         parts = path.split()
         allowed.add(parts[0])
@@ -170,14 +175,14 @@ def fleet(
     help_text = '\n\n'.join(pages)
 
     err.print('probing')
-    observations = fleet_module.probe(asked, help_text, allowed)
+    observations = investigate_module.probe(asked, help_text, allowed)
 
     err.print('authoring')
-    tape = fleet_module.author(asked, help_text, observations)
+    tape = investigate_module.author(asked, help_text, observations)
     if 'steps' not in tape:
         raise typer.BadParameter('model did not return a tape')
     for step in tape['steps']:
-        fleet_module.check_command(step['run'], allowed)
+        investigate_module.check_command(step['run'], allowed)
 
     produce(tape, asked, library, confirm=not yes, watch=watch)
 

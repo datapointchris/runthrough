@@ -11,7 +11,7 @@ import pytest
 
 from runthrough import ask
 
-TAPE = '{"name": "A Tape", "steps": [{"run": "indy status", "pause": 1.0}]}'
+TAPE = '{"name": "A Tape", "steps": [{"run": "notes status", "pause": 1.0}]}'
 CLOSING_REMARK = 'The tape JSON above was the deliverable; the work is complete.'
 
 

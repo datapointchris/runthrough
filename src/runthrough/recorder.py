@@ -22,37 +22,39 @@ from pathlib import Path
 import pyte
 import yaml
 
+from runthrough import config as config_module
+
 PROMPT = '\x1b[32m❯\x1b[0m '
 
-GHOSTTY_THEME = Path.home() / '.config/ghostty/themes/current.conf'
 ANSI_NAMES = ('black', 'red', 'green', 'brown', 'blue', 'magenta', 'cyan', 'white')
 
 
-def load_terminal_theme() -> tuple[dict[str, str], str, str, list[str]]:
-    """Read the palette the terminal is actually using, so a recording looks like
-    the shell it was taken from and follows `theme apply` without being re-cut."""
+def load_terminal_theme(settings: dict[str, list[str]]) -> tuple[dict[str, str], str, str, list[str]]:
+    """Take the palette from the terminal's own config, so a recording looks like the
+    shell it came from and follows a theme change without being re-cut."""
     swatches: dict[int, str] = {}
-    foreground, background = '#d5d8e2', '#191b22'
+    for entry in settings.get('palette', []):
+        index, separator, color = entry.partition('=')
+        if separator and index.strip().isdigit():
+            swatches[int(index)] = color.strip()
 
-    if GHOSTTY_THEME.exists():
-        for line in GHOSTTY_THEME.read_text().splitlines():
-            key, _, value = line.partition('=')
-            key, value = key.strip(), value.strip()
-            if key == 'palette' and '=' in value:
-                index, _, color = value.partition('=')
-                swatches[int(index)] = color
-            elif key == 'foreground':
-                foreground = value
-            elif key == 'background':
-                background = value
-
+    foreground = (settings.get('foreground') or ['#d5d8e2'])[-1]
+    background = (settings.get('background') or ['#191b22'])[-1]
     ansi = [swatches.get(index, foreground) for index in range(16)]
     palette = {name: ansi[index] for index, name in enumerate(ANSI_NAMES)}
     palette['yellow'] = palette['brown']
     return palette, foreground, background, ansi
 
 
-PALETTE, FOREGROUND, BACKGROUND, ANSI = load_terminal_theme()
+def load_terminal_font(settings: dict[str, list[str]], appearance: config_module.Appearance) -> tuple[str, int]:
+    family = appearance.font_family or (settings.get('font-family') or ['monospace'])[-1].strip('"')
+    size = appearance.font_size or int(float((settings.get('font-size') or ['13'])[-1]))
+    return family, size
+
+
+CONFIG = config_module.load()
+TERMINAL = config_module.read_terminal_config(CONFIG.appearance.terminal_config or config_module.default_terminal_config())
+PALETTE, FOREGROUND, BACKGROUND, ANSI = load_terminal_theme(TERMINAL)
 
 try:
     from pyte.graphics import FG_BG_256
@@ -62,23 +64,7 @@ except (ImportError, AttributeError, IndexError):
     PYTE_256_TO_THEME = {}
 
 
-GHOSTTY_FONT = Path.home() / '.config/ghostty/fonts/current.conf'
-
-
-def load_terminal_font() -> tuple[str, int]:
-    family, size = 'monospace', 13
-    if GHOSTTY_FONT.exists():
-        for line in GHOSTTY_FONT.read_text().splitlines():
-            key, _, value = line.partition('=')
-            key, value = key.strip(), value.strip().strip('"')
-            if key == 'font-family':
-                family = value
-            elif key == 'font-size':
-                size = int(float(value))
-    return family, size
-
-
-FONT_FAMILY, FONT_SIZE = load_terminal_font()
+FONT_FAMILY, FONT_SIZE = load_terminal_font(TERMINAL, CONFIG.appearance)
 
 
 def resolve_font_file(family: str, bold: bool) -> Path | None:

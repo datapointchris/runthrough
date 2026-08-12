@@ -11,25 +11,25 @@ from runthrough.ask import strip_fences
 from runthrough.recorder import mix
 
 RICH_HELP = """\
- Usage: indy [OPTIONS] COMMAND [ARGS]...
+ Usage: notes [OPTIONS] COMMAND [ARGS]...
 
 ╭─ Commands ───────────────────────────────────────────╮
 │ status        Show index health.                     │
-│ search        Semantic search across indexed code.   │
+│ search        Search across everything indexed.      │
 │ errors-clear  Remove all error records.              │
 ╰──────────────────────────────────────────────────────╯
 """
 
 COBRA_HELP = """\
 Usage:
-  icb [command]
+  deploy [command]
 
 Available Commands:
-  articles           List and manage your saved articles
-  projects           List, inspect, and manage your projects
+  runs               List and inspect past runs
+  targets            List and inspect deploy targets
 
 Flags:
-  -h, --help   help for icb
+  -h, --help   help for deploy
 """
 
 
@@ -62,7 +62,7 @@ class TestExtractSubcommands:
         assert extract_subcommands(RICH_HELP) == ['status', 'search', 'errors-clear']
 
     def test_reads_a_cobra_list(self):
-        assert extract_subcommands(COBRA_HELP) == ['articles', 'projects']
+        assert extract_subcommands(COBRA_HELP) == ['runs', 'targets']
 
     def test_stops_before_the_flags_section(self):
         assert 'help' not in extract_subcommands(COBRA_HELP)
