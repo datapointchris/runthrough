@@ -30,6 +30,18 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/runthrough"]
 
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+branch = "main"
+commit_message = "build(release): {version}"
+# The package name is hardcoded because python-semantic-release does not set
+# $PACKAGE_NAME — the variable form silently no-ops and ships a stale uv.lock.
+build_command = """
+    pip install uv
+    uv lock --upgrade-package runthrough
+    git add uv.lock
+"""
+
 [tool.mypy]
 pretty = true
 ignore_missing_imports = true
