@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v1.0.0 (2026-08-12)
+
+### Refactoring
+
+- Read the machine's specifics from config, not from source
+  ([`21b937c`](https://github.com/datapointchris/runthrough/commit/21b937cc58c623785ce98a74144bd3431d6f0dc9))
+
+Two commands and one theme layout were written into the source: `toolbox list` and `indy search` as
+  the routing pair, and a generated theme file's path as the palette. Neither is a property of
+  recording a terminal. Both made the tool unusable by anyone else, and both described the author's
+  machine in a public repo.
+
+Routing is now `routing.inventory` and `routing.search` in ~/.config/runthrough/config.yml. Anything
+  that lists and anything that searches will do. Without them `investigate` says what to set and
+  why; `play` and `ask` never needed them.
+
+Appearance now reads the terminal's own config and follows `config-file` includes, which is both
+  general and more correct than naming a generator's output: a `?` prefix is ghostty's
+  suppress-if-absent marker, and treating it as part of the path was why the palette silently fell
+  back to defaults.
+
+BREAKING CHANGE: `runthrough fleet` is now `runthrough investigate`, and the module with it. The old
+  name described whose machine it was written on rather than what the command does.
+
+Sample data throughout the tests now uses invented tools rather than real ones.
+
+### Breaking Changes
+
+- `runthrough fleet` is now `runthrough investigate`, and the module with it. The old name described
+  whose machine it was written on rather than what the command does.
+
+
 ## v0.1.0 (2026-08-12)
 
 ### Bug Fixes
