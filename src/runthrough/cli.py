@@ -100,7 +100,7 @@ def ask(
 
     err.print('authoring tape')
     raw = ask_module.author_tape(cli, asked, help_text, sandbox)
-    tape = ask_module.validate_tape(ask_module.clean_yaml(raw), cli)
+    tape = ask_module.validate_tape(raw, cli)
     if sandbox:
         tape['sandbox'] = 'xdg'
 
@@ -136,7 +136,7 @@ def fleet(
     observations = fleet_module.probe(asked, help_text, allowed)
 
     err.print('authoring')
-    tape = fleet_module.parse_tape(fleet_module.author(asked, help_text, observations))
+    tape = ask_module.parse_tape(fleet_module.author(asked, help_text, observations))
     if 'steps' not in tape:
         raise typer.BadParameter('model did not return a tape')
     for step in tape['steps']:

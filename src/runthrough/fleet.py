@@ -15,7 +15,6 @@ import subprocess
 import sys
 import textwrap
 
-from runthrough.ask import clean_yaml
 from runthrough.ask import strip_ansi
 
 READ_COMMANDS = {
@@ -117,16 +116,6 @@ TAPE_SCHEMA = """\
      "pause": 3.0}
   ]
 }"""
-
-
-def parse_tape(raw: str) -> dict:
-    """JSON, not YAML: a jq filter is full of colons and quotes, which is exactly
-    what a YAML plain scalar cannot hold."""
-    text = clean_yaml(raw)
-    match = re.search(r'\{.*\}', text, re.DOTALL)
-    if not match:
-        raise SystemExit(f'model did not return a tape:\n{raw[:400]}')
-    return json.loads(match.group(0))
 
 
 def registry_roster() -> str:

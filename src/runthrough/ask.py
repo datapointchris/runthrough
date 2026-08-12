@@ -7,12 +7,11 @@ tape is what gets executed, after you have seen it.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
 import textwrap
-
-import yaml
 
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 COMMAND_HEADING = re.compile(r'(Available Commands:|Commands\s*$|Commands\s*[─╮])')
@@ -20,22 +19,23 @@ SUBCOMMAND = re.compile(r'^[│|]?\s{0,4}([a-z][a-z0-9-]{1,30})\s{2,}\S')
 CHAINING = re.compile(r'[;&|`]|\$\(|>>|(?<![0-9])>')
 
 TAPE_SCHEMA = """\
-name: <2-4 word page name, title case>
-title: <one line, sentence case, says what the sequence achieves>
-description: >
-  <two or three sentences: what this shows and why the order matters>
-tags: [<cli>, <topic>, <topic>]
-cli: <cli>
-sandbox: none | xdg
-columns: 100
-rows: 22
-typing_speed: 0.03
-max_gap: 1.0
-steps:
-  - narrate: <one sentence, present tense, says what this step is for>
-    run: <a single command>
-    pause: 3.0
-"""
+{
+  "name": "<2-4 word page name, title case>",
+  "title": "<one line, sentence case, says what the sequence achieves>",
+  "description": "<two or three sentences: what this shows and why the order matters>",
+  "tags": ["<cli>", "<topic>", "<topic>"],
+  "cli": "<cli>",
+  "sandbox": "none | xdg",
+  "columns": 100,
+  "rows": 22,
+  "typing_speed": 0.03,
+  "max_gap": 1.0,
+  "steps": [
+    {"narrate": "<one sentence, present tense, says what this step is for>",
+     "run": "<a single command>",
+     "pause": 3.0}
+  ]
+}"""
 
 
 def strip_ansi(text: str) -> str:
@@ -127,7 +127,7 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
         - `narrate` explains WHY this step, not what the command says.
         - {sandbox_rule}
 
-        Output ONLY YAML in exactly this shape, with no prose and no code fences:
+        Output ONLY JSON in exactly this shape, with no prose and no code fences:
 
         {TAPE_SCHEMA}
 
@@ -149,17 +149,26 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
     return result.stdout.strip()
 
 
-def clean_yaml(raw: str) -> str:
+def strip_fences(raw: str) -> str:
     if '```' in raw:
-        blocks = re.findall(r'```(?:ya?ml)?\n(.*?)```', raw, re.DOTALL)
+        blocks = re.findall(r'```(?:json|ya?ml)?\n(.*?)```', raw, re.DOTALL)
         if blocks:
             return blocks[0]
     return raw
 
 
+def parse_tape(raw: str) -> dict:
+    """JSON, not YAML: a command carrying a jq filter or any `: ` is a colon inside
+    what YAML would read as a plain scalar, and the tape fails to load."""
+    match = re.search(r'\{.*\}', strip_fences(raw), re.DOTALL)
+    if not match:
+        raise SystemExit(f'model did not return a tape:\n{raw[:400]}')
+    return json.loads(match.group(0))
+
+
 def validate_tape(text: str, cli: str) -> dict:
-    tape = yaml.safe_load(text)
-    if not isinstance(tape, dict) or 'steps' not in tape:
+    tape = parse_tape(text)
+    if 'steps' not in tape:
         raise SystemExit('model did not return a tape')
 
     for step in tape['steps']:
