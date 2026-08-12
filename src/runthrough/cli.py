@@ -32,7 +32,7 @@ DEFAULT_LIBRARY = Path.home() / '.local/share/runthrough'
 
 def installed_commit() -> str | None:
     """Read the git commit from the installed dist-info. uv records it for any git
-    install, which is how the fleet installs everything."""
+    install, which is how this tool is normally installed."""
     try:
         distribution = importlib.metadata.distribution('runthrough')
         direct_url = distribution.read_text('direct_url.json')

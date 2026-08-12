@@ -279,8 +279,8 @@ def load_tape(path: Path) -> Tape:
 
 
 def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
-    """Every fleet tool resolves its paths through XDG, so redirecting the four
-    XDG roots sandboxes any of them without the recorder knowing what it is."""
+    """A tool that resolves its paths through XDG is sandboxed by redirecting the
+    four XDG roots, without the recorder knowing what tool it is."""
     environment = dict(os.environ)
     environment.update(
         TERM='xterm-256color',

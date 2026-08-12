@@ -2,25 +2,22 @@
 
 Universal rules live in `~/.claude/CLAUDE.md`. `README.md` carries the design reasoning.
 
-**This repo is public, and it names nothing private** (⚠️ MANDATORY): no tool of Chris's, no
+**This repo is public, and it names nothing private** (⚠️ MANDATORY): no private tool name, no
 hostname, no machine layout, no internal directory — not in source, not in tests, not in help
-text, not in a fixture. It went public once carrying `toolbox`, `indy`, `macmini` and a
-pointer to the standards directory, and a peer's sweep is what caught it. Before any commit
-that touches docs, tests or help strings:
+text, not in a fixture. It went public once carrying three of them plus a pointer to an internal
+directory, and someone else's sweep is what caught it.
 
-```bash
-rg -i -w 'toolbox|indy|icb|doit|forge|dotfiles|macmini|mbp|ichrisbirch|syncthing' \
-  --glob '!uv.lock' --glob '!CHANGELOG.md' .
-```
+Sweep before any commit that touches docs, tests or help strings. The term list is maintained in
+one place, and this repo deliberately does not keep a second copy of it — it had one, and the two
+diverged in both directions. The sweep is in the authoring standard, under "A repo is a product
+for a stranger".
 
-Sample data uses invented names — `deploy`, `notes`, `mytools`, `staging`. The only surviving
-hit is the generated `[tool.forge]` block in `pyproject.toml`, which is a build marker.
+Sample data uses invented names: `deploy`, `notes`, `mytools`, `staging`.
 
 **The machine's specifics are configuration, never literals** (⚠️ MANDATORY): the routing
-commands and the terminal appearance both come from `config.py`. `toolbox list` and
-`indy search` were hardcoded in the source and made the tool unusable by anyone else while
-leaking what Chris runs. A path or command name written into a module is the same bug
-returning.
+commands and the terminal appearance both come from `config.py`. Two private tool invocations
+were once hardcoded in the source, which made the tool unusable by anyone else and leaked what
+the author runs. A path or command name written into a module is the same bug returning.
 
 **The recording must never be authored** (⚠️ MANDATORY): every character on the screen comes
 from a command that ran. Never add a way to inject expected output, stub a slow command, or
@@ -28,8 +25,8 @@ patch up a frame after capture. The moment a recording can lie, the library stop
 drift check and becomes documentation that rots.
 
 **The model gets no tools** (⚠️ MANDATORY): every `claude -p` call goes through `ask_model`
-in `ask.py` and passes `--allowedTools ""`. One door, per the fleet standard that an external
-effect gets exactly one chokepoint. Widening this to let the model explore would remove the
+in `ask.py` and passes `--allowedTools ""`. One door, because an external effect gets exactly
+one chokepoint. Widening this to let the model explore would remove the
 only structural reason the guard is trustworthy.
 
 **Every generated command passes `check_command` before it runs.** Three things it gets right
