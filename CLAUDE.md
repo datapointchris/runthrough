@@ -25,9 +25,13 @@ patch up a frame after capture. The moment a recording can lie, the library stop
 drift check and becomes documentation that rots.
 
 **The model gets no tools** (⚠️ MANDATORY): every `claude -p` call goes through `ask_model`
-in `ask.py` and passes `--allowedTools ""`. One door, because an external effect gets exactly
-one chokepoint. Widening this to let the model explore would remove the
+in `ask.py` and denies every built-in with `--disallowed-tools`. One door, because an external
+effect gets exactly one chokepoint. Widening this to let the model explore would remove the
 only structural reason the guard is trustworthy.
+
+The list is a deny list because an allow list does not confine a session: `--allowedTools`
+pre-approves tools and leaves the rest reachable, so a session passed an empty allow list runs
+Bash anyway. A tool added to the CLI's built-in set is a tool this list does not yet name.
 
 **Every generated command passes `check_command` before it runs.** Three things it gets right
 that were bugs first, all three now pinned by tests:

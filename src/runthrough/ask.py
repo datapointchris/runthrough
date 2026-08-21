@@ -145,12 +145,39 @@ NUDGE = (
     'the work is complete — the JSON is the only thing read.'
 )
 
+# What the model may not do, as a deny list because an allow list does not
+# restrict anything: `claude -p --allowedTools ""` runs Bash regardless, since
+# that flag pre-approves tools rather than confining the session to them.
+#
+# Every built-in is here because this session needs none of them. It is handed
+# help text and probe output on stdin and returns a tape; the recorder is what
+# runs commands, behind check_command, after a person has read the tape. A model
+# that could reach the machine itself would be running commands nobody approved,
+# and would make the guard on the recorder beside the point.
+DENIED_TOOLS = (
+    'Bash',
+    'Read',
+    'Write',
+    'Edit',
+    'NotebookEdit',
+    'Glob',
+    'Grep',
+    'WebFetch',
+    'WebSearch',
+    'Task',
+    'TodoWrite',
+)
+
+
+def model_argv() -> list[str]:
+    return ['claude', '-p', '--disallowed-tools', ','.join(DENIED_TOOLS)]
+
 
 def ask_model(prompt: str, timeout: int = 420) -> str:
     """The one door to the model. It is never given tools: it reads help text and
     probe output as plain text and returns a tape, and the recorder does the running."""
     result = subprocess.run(
-        ['claude', '-p', '--allowedTools', ''],
+        model_argv(),
         input=prompt,
         capture_output=True,
         text=True,
