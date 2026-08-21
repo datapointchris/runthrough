@@ -1,6 +1,6 @@
 [project]
 name = "runthrough"
-version = "1.0.0"
+version = "1.0.1"
 description = "Record real terminal sessions from declarative tapes, and author those tapes from a question."
 requires-python = ">=3.12"
 dependencies = [

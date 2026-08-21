@@ -1,6 +1,72 @@
 # CHANGELOG
 
 
+## v1.0.1 (2026-08-21)
+
+### Bug Fixes
+
+- **ask**: Confine the model session with a deny list
+  ([`067c66f`](https://github.com/datapointchris/runthrough/commit/067c66ffb925a22d4217b496694e314032abda31))
+
+An allow list does not restrict a session. `claude -p --allowedTools ""` pre-approves tools and
+  leaves every other one reachable, so the session that authors a tape could run Bash, read the
+  machine, and reach the network. On a machine whose settings set bypassPermissions there was
+  nothing else between it and the disk.
+
+The session is handed help text and probe output on stdin and returns JSON. It needs no tool at all,
+  so every built-in is denied. Execution stays with the recorder, behind check_command, after a
+  person has read the tape.
+
+The argv is asserted in tests/test_ask_model.py, because the confinement is entirely a property of
+  the arguments and nothing else would catch a regression.
+
+### Chores
+
+- **pyproject**: Raise assertion verbosity instead of test verbosity
+  ([`1bfbc71`](https://github.com/datapointchris/runthrough/commit/1bfbc719714bbe4b1f47f96c43272e8546ca0ca6))
+
+A failing assertion truncated its diff and printed "use -vv to show", so the reader re-ran the whole
+  suite to see it. addopts = "-vv" answered that by raising test-list verbosity as well, which is a
+  different question: a green run printed a line per test and said nothing. verbosity_assertions
+  raises only the half that was wanted.
+
+Written by the forge pyproject die.
+
+### Continuous Integration
+
+- Regenerate validate.yml at toolchain 16
+  ([`51285ab`](https://github.com/datapointchris/runthrough/commit/51285ab705ec1b270f039a67c45837289cf1883b))
+
+Catches this repo up with the version manifest: StyLua pinned to a release rather than latest, a
+  reworded bats discovery note, and double quotes in the node block. Only the blocks this repo
+  declares are affected.
+
+Triggers and job structure are unchanged.
+
+### Documentation
+
+- Stop naming private tooling in a public repo
+  ([`fc3b094`](https://github.com/datapointchris/runthrough/commit/fc3b0944339091d9a42144fd47ed6a67a5809833))
+
+The rule against it was stated at the top of CLAUDE.md and broken seven lines below, in the sweep
+  meant to catch it — and again in the incident telling, twice in a docstring, and once in a
+  comment.
+
+The sweep itself is gone from here. It had drifted from the canonical one in both directions, so
+  each list missed what the other caught. One copy now, in the authoring standard.
+
+The repo sweeps clean.
+
+### Refactoring
+
+- Remove the module investigate.py replaced
+  ([`0ed17da`](https://github.com/datapointchris/runthrough/commit/0ed17da94fcc1d62e8407f3a6f5b8eaf08ff2ea9))
+
+The rename commit added the new module but its pathspec never named the deletion, so both files
+  shipped. The old one still carried the hardcoded routing commands this repo had just moved into
+  config.
+
+
 ## v1.0.0 (2026-08-12)
 
 ### Refactoring
