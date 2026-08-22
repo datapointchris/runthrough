@@ -25,9 +25,10 @@ patch up a frame after capture. The moment a recording can lie, the library stop
 drift check and becomes documentation that rots.
 
 **The model gets no tools** (⚠️ MANDATORY): every `claude -p` call goes through `ask_model`
-in `ask.py` and denies every built-in with `--disallowed-tools`. One door, because an external
-effect gets exactly one chokepoint. Widening this to let the model explore would remove the
-only structural reason the guard is trustworthy.
+in `ask.py` and denies every built-in with `--disallowed-tools`. Naming that boundary here is
+what `standards/repo-structure.md` § "Every external effect goes through one named chokepoint"
+requires; widening it to let the model explore would remove the only structural reason the
+guard is trustworthy.
 
 The list is a deny list because an allow list does not confine a session: `--allowedTools`
 pre-approves tools and leaves the rest reachable, so a session passed an empty allow list runs
