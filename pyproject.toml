@@ -85,6 +85,7 @@ datetime = "dt"
 sqlalchemy = "sa"
 "pyspark.sql.functions" = "sf"
 "pyspark.sql.types" = "st"
+
 [tool.pyright]
 typeCheckingMode = "standard"
 analyzeUnannotatedFunctions = true
