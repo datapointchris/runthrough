@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -459,6 +459,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pyselfupdate"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/56/37363aeddfe8d3b3e40ed9000a13be524d5b28fd735cda29a99b0b086460/pyselfupdate-0.5.0.tar.gz", hash = "sha256:c14f221cd445e90f7be6d0977c3662682f8e1857e819456f5bb9be8cec4384e8", size = 32239, upload-time = "2026-10-08T21:44:05.782Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/88/0378a3d6a164e2da5dc06eccfa16818fead2520e55a6a04b38beca01f350/pyselfupdate-0.5.0-py3-none-any.whl", hash = "sha256:ccbad29973e308fef2eb21b5714e0cbce1855aec791ed2424c20551e8e2d478e", size = 36830, upload-time = "2026-10-08T21:44:04.9Z" },
+]
+
+[package.optional-dependencies]
+typer = [
+    { name = "typer" },
+]
+
+[[package]]
 name = "pyte"
 version = "0.8.2"
 source = { registry = "https://pypi.org/simple" }
@@ -589,6 +603,7 @@ source = { editable = "." }
 dependencies = [
     { name = "brotli" },
     { name = "fonttools" },
+    { name = "pyselfupdate", extra = ["typer"] },
     { name = "pyte" },
     { name = "pyyaml" },
     { name = "rich" },
@@ -607,6 +622,7 @@ dev = [
 requires-dist = [
     { name = "brotli", specifier = ">=1.1.0" },
     { name = "fonttools", specifier = ">=4.53.0" },
+    { name = "pyselfupdate", extras = ["typer"], specifier = ">=0.5.0" },
     { name = "pyte", specifier = ">=0.8.2" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.7.0" },

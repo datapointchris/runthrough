@@ -13,6 +13,9 @@ from typing import Annotated
 
 import typer
 import yaml
+from pyselfupdate import Config
+from pyselfupdate import notify
+from pyselfupdate.typercmd import run_update
 from rich.console import Console
 
 from runthrough import ask as ask_module
@@ -28,6 +31,9 @@ app = typer.Typer(
 err = Console(stderr=True)
 
 DEFAULT_LIBRARY = Path.home() / '.local/share/runthrough'
+
+# One config for `update` and the notice, so the notice never names a release `update` would not install.
+UPDATE_CONFIG = Config(tool='runthrough', owner='datapointchris')
 
 
 def installed_commit() -> str | None:
@@ -58,12 +64,16 @@ def _version_callback(asked: bool) -> None:
 
 @app.callback()
 def _root(
+    ctx: typer.Context,
     version: Annotated[
         bool | None,
         typer.Option('--version', callback=_version_callback, is_eager=True, help='Show the installed version and exit.'),
     ] = None,
 ) -> None:
     """Record what you actually typed, and what it actually printed."""
+    # `update` is already installing the release the notice would name.
+    if ctx.invoked_subcommand != 'update':
+        notify(UPDATE_CONFIG)
 
 
 def open_page(path: Path) -> None:
@@ -220,6 +230,14 @@ def library(
     for entry in recorded:
         mark = '' if entry['page'] else '  (no recording)'
         print(f'{entry["name"]}  —  {entry["title"]}{mark}')
+
+
+@app.command(rich_help_panel='Manage')
+def update(
+    check_only: Annotated[bool, typer.Option('--check', help='Report whether an update is available without installing it.')] = False,
+) -> None:
+    """Update runthrough to the latest GitHub release."""
+    run_update(UPDATE_CONFIG, check_only=check_only)
 
 
 def main() -> None:
