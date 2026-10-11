@@ -49,7 +49,7 @@ def installed_commit() -> str | None:
     return None
 
 
-def _version_callback(asked: bool) -> None:
+def version_callback(asked: bool) -> None:
     """`runthrough --version`, in the one line every CLI here answers it with."""
     if not asked:
         return
@@ -63,11 +63,11 @@ def _version_callback(asked: bool) -> None:
 
 
 @app.callback()
-def _root(
+def root(
     ctx: typer.Context,
     version: Annotated[
         bool | None,
-        typer.Option('--version', callback=_version_callback, is_eager=True, help='Show the installed version and exit.'),
+        typer.Option('--version', callback=version_callback, is_eager=True, help='Show the installed version and exit.'),
     ] = None,
 ) -> None:
     """Record what you actually typed, and what it actually printed."""
