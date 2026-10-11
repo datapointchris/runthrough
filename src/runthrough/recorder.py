@@ -6,11 +6,16 @@ actually printed. Nothing about the terminal contents is authored by hand.
 
 from __future__ import annotations
 
+import base64
 import codecs
+import fcntl
 import html
+import io
+import json
 import os
 import pty
 import select
+import shutil
 import struct
 import subprocess
 import sys
@@ -86,9 +91,7 @@ def resolve_font_file(family: str, bold: bool) -> Path | None:
 def embed_font(path: Path, codepoints: set[int]) -> str | None:
     """A Nerd Font ships thousands of icon glyphs and runs to megabytes. Subset to
     the codepoints this page actually paints, or the artifact is mostly font."""
-    import base64
-    import io
-
+    # 430ms → 320ms on `runthrough --help`, 2026-10-11
     from fontTools.subset import Options
     from fontTools.subset import Subsetter
     from fontTools.ttLib import TTFont
@@ -191,7 +194,6 @@ def highlight_command(command: str) -> list[tuple[str, str]]:
     """Colour a command line the way zsh-syntax-highlighting would, using its
     stock styles. zsh recolours a word as it resolves; this paints the settled
     state from the first keystroke, which reads as intent rather than as a glitch."""
-    import shutil
 
     spans: list[tuple[str, str]] = []
     at_command_position = True
@@ -311,7 +313,6 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
 def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows: int) -> list[tuple[float, bytes]]:
     master, slave = pty.openpty()
     termios.tcsetattr(slave, termios.TCSANOW, termios.tcgetattr(slave))
-    import fcntl
 
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', rows, columns, 0, 0))
 
@@ -696,8 +697,6 @@ def render_line(runs) -> str:
 
 
 def write_asciicast(cast, tape: Tape, path: Path) -> None:
-    import json
-
     header = {
         'version': 2,
         'width': tape.columns,

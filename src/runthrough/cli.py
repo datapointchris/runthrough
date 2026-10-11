@@ -6,6 +6,7 @@ import importlib.metadata
 import json
 import platform
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -138,7 +139,6 @@ def ask(
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Ask one command to show you something, reading only its own help."""
-    import shutil
 
     if shutil.which(cli) is None:
         raise typer.BadParameter(f'{cli} is not installed')

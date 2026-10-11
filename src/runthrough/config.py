@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shlex
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -74,8 +75,6 @@ class Config:
 
 
 def shell_quote(text: str) -> str:
-    import shlex
-
     return shlex.quote(text)
 
 
