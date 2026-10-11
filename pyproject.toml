@@ -1,6 +1,6 @@
 [project]
 name = "runthrough"
-version = "1.1.0"
+dynamic = ["version"]
 description = "Record real terminal sessions from declarative tapes, and author those tapes from a question."
 requires-python = ">=3.13"
 dependencies = [
@@ -24,24 +24,25 @@ dev = [
     "ruff==0.12.5",
 ]
 
+# The release tag is the version. python-semantic-release finds no file to
+# stamp, so it tags the merge commit itself and writes no release commit.
+# uv_build cannot do this: its metadata has no dynamic version field.
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+style = "semver"
+
+# A new commit or tag changes the version, so it has to invalidate uv's cache.
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/runthrough"]
-
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-commit_message = "build(release): {version}"
-# The package name is hardcoded because python-semantic-release does not set
-# $PACKAGE_NAME — the variable form silently no-ops and ships a stale uv.lock.
-# Reads the uv-lock hook's rev, the one uv release every uv.lock writer runs.
-build_command = '''
-    pip install "uv==$(python -c 'import re; print(re.search(r"uv-pre-commit\s+rev: \"?([\w.]+)", open(".pre-commit-config.yaml").read())[1])')"
-    uv lock --upgrade-package runthrough
-    git add uv.lock
-'''
 
 [tool.mypy]
 pretty = true
