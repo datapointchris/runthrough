@@ -17,6 +17,7 @@ import sys
 import termios
 import time
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 
 import pyte
@@ -425,7 +426,7 @@ def render_frames(cast: list[tuple[float, bytes]], columns: int, rows: int, fps:
 def find_first_painted_frame(frames: list[tuple[float, list]]) -> float:
     """A recording that opens on an empty screen looks broken on first paint."""
     for timestamp, lines in frames:
-        if any(run[0].strip() for line in lines for run in line):
+        if any(run[0].strip() for run in chain.from_iterable(lines)):
             return timestamp
     return 0.0
 
