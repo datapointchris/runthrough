@@ -25,10 +25,9 @@ def replies(monkeypatch):
 
         def fake_ask_model(prompt: str, **_: object) -> ask.Reply:
             prompts.append(prompt)
-            return ask.Reply(text=remaining.pop(0), model='claude-test')
+            return ask.Reply(text=remaining.pop(0), model='claude-test', claude_version='9.9.9')
 
         monkeypatch.setattr(ask, 'ask_model', fake_ask_model)
-        monkeypatch.setattr(ask, 'claude_version', lambda: '9.9.9')
         return prompts
 
     return queue

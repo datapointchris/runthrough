@@ -173,6 +173,7 @@ DENIED_TOOLS = (
 class Reply(NamedTuple):
     text: str
     model: str
+    claude_version: str = ''
 
 
 def model_argv() -> list[str]:
@@ -180,25 +181,29 @@ def model_argv() -> list[str]:
     return ['claude', '-p', '--output-format', 'json', '--verbose', '--disallowed-tools', ','.join(DENIED_TOOLS)]
 
 
-def result_frame(stdout: str) -> dict[str, object] | None:
-    """The last `result` frame in the array, searched from the end because nothing
-    promises it stays the last element."""
+def frames(stdout: str) -> list[dict[str, object]]:
+    """The array of frames `--verbose` prints, or none where stdout is not one."""
     try:
-        frames = json.loads(stdout)
+        parsed = json.loads(stdout)
     except json.JSONDecodeError:
-        return None
-    if not isinstance(frames, list):
-        return None
-    return next((f for f in reversed(frames) if isinstance(f, dict) and f.get('type') == 'result'), None)
+        return []
+    return [f for f in parsed if isinstance(f, dict)] if isinstance(parsed, list) else []
 
 
 def primary_model(usage: object) -> str:
     """The model that wrote the most output, ties to the lower name. A call can reach
-    a second model for housekeeping, and that one is not the author."""
+    a second model for housekeeping, and that one is not the author.
+
+    Named by the entry's `canonicalModel` where it carries one. The key carries the
+    context-window suffix, as in `claude-opus-5-5[1m]`, which moves with a setting
+    while the same weights answer."""
     if not isinstance(usage, dict):
         return ''
     ranked = sorted(usage.items(), key=lambda item: (-int((item[1] or {}).get('outputTokens', 0)), item[0]))
-    return str(ranked[0][0]) if ranked else ''
+    if not ranked:
+        return ''
+    name, entry = ranked[0]
+    return str((entry or {}).get('canonicalModel') or name)
 
 
 def ask_model(prompt: str, timeout: int = 420) -> Reply:
@@ -212,22 +217,19 @@ def ask_model(prompt: str, timeout: int = 420) -> Reply:
         timeout=timeout,
         check=False,
     )
-    frame = result_frame(result.stdout)
+    printed = frames(result.stdout)
+    # Searched from the end, because nothing promises the result stays the last frame.
+    frame = next((f for f in reversed(printed) if f.get('type') == 'result'), None)
     if frame is None:
         raise SystemExit(f'claude failed: {result.stderr.strip() or result.stdout.strip()[:400]}')
     if result.returncode != 0 or frame.get('is_error') or frame.get('subtype') != 'success':
         raise SystemExit(f'claude failed: {frame.get("result") or frame.get("subtype") or result.stderr.strip()}')
-    return Reply(text=str(frame.get('result') or '').strip(), model=primary_model(frame.get('modelUsage')))
-
-
-def claude_version() -> str:
-    """The first field of `claude --version`, or '' where it will not answer."""
-    try:
-        result = subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=10, check=False)
-    except (OSError, subprocess.TimeoutExpired):
-        return ''
-    fields = result.stdout.split() if result.returncode == 0 else []
-    return fields[0] if fields else ''
+    init = next((f for f in printed if f.get('type') == 'system' and f.get('subtype') == 'init'), {})
+    return Reply(
+        text=str(frame.get('result') or '').strip(),
+        model=primary_model(frame.get('modelUsage')),
+        claude_version=str(init.get('claude_code_version') or ''),
+    )
 
 
 def request_tape(prompt: str) -> dict:
@@ -244,7 +246,7 @@ def request_tape(prompt: str) -> dict:
         print('  no JSON in the reply, asking again', file=sys.stderr)
         reply = ask_model(prompt + NUDGE)
         tape = parse_tape(reply.text)
-    tape['authored_by'] = {'model': reply.model, 'claude_version': claude_version()}
+    tape['authored_by'] = {'model': reply.model, 'claude_version': reply.claude_version}
     return tape
 
 
