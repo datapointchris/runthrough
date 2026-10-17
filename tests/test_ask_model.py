@@ -19,7 +19,7 @@ def recorded_argv(monkeypatch):
 
     class Completed:
         returncode = 0
-        stdout = '{"steps": []}'
+        stdout = '[{"type": "result", "subtype": "success", "result": "{}"}]'
         stderr = ''
 
     def fake_run(argv, **_: object):

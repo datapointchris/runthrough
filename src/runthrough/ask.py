@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from typing import NamedTuple
 
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 COMMAND_HEADING = re.compile(r'(Available Commands:|Commands\s*$|Commands\s*[─╮])')
@@ -169,11 +170,38 @@ DENIED_TOOLS = (
 )
 
 
+class Reply(NamedTuple):
+    text: str
+    model: str
+
+
 def model_argv() -> list[str]:
-    return ['claude', '-p', '--disallowed-tools', ','.join(DENIED_TOOLS)]
+    # --verbose fixes the output as one array of frames, whatever the user's config says.
+    return ['claude', '-p', '--output-format', 'json', '--verbose', '--disallowed-tools', ','.join(DENIED_TOOLS)]
 
 
-def ask_model(prompt: str, timeout: int = 420) -> str:
+def result_frame(stdout: str) -> dict[str, object] | None:
+    """The last `result` frame in the array, searched from the end because nothing
+    promises it stays the last element."""
+    try:
+        frames = json.loads(stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(frames, list):
+        return None
+    return next((f for f in reversed(frames) if isinstance(f, dict) and f.get('type') == 'result'), None)
+
+
+def primary_model(usage: object) -> str:
+    """The model that wrote the most output, ties to the lower name. A call can reach
+    a second model for housekeeping, and that one is not the author."""
+    if not isinstance(usage, dict):
+        return ''
+    ranked = sorted(usage.items(), key=lambda item: (-int((item[1] or {}).get('outputTokens', 0)), item[0]))
+    return str(ranked[0][0]) if ranked else ''
+
+
+def ask_model(prompt: str, timeout: int = 420) -> Reply:
     """The one door to the model. It is never given tools: it reads help text and
     probe output as plain text and returns a tape, and the recorder does the running."""
     result = subprocess.run(
@@ -184,20 +212,40 @@ def ask_model(prompt: str, timeout: int = 420) -> str:
         timeout=timeout,
         check=False,
     )
-    if result.returncode != 0:
-        raise SystemExit(f'claude failed: {result.stderr.strip()}')
-    return result.stdout.strip()
+    frame = result_frame(result.stdout)
+    if frame is None:
+        raise SystemExit(f'claude failed: {result.stderr.strip() or result.stdout.strip()[:400]}')
+    if result.returncode != 0 or frame.get('is_error') or frame.get('subtype') != 'success':
+        raise SystemExit(f'claude failed: {frame.get("result") or frame.get("subtype") or result.stderr.strip()}')
+    return Reply(text=str(frame.get('result') or '').strip(), model=primary_model(frame.get('modelUsage')))
+
+
+def claude_version() -> str:
+    """The first field of `claude --version`, or '' where it will not answer."""
+    try:
+        result = subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+    fields = result.stdout.split() if result.returncode == 0 else []
+    return fields[0] if fields else ''
 
 
 def request_tape(prompt: str) -> dict:
     """Ask twice before giving up. The model sometimes answers with the tape and then
     a closing remark, and `claude -p` returns only that last message — so the JSON is
-    gone rather than malformed, and nothing in the reply can be salvaged."""
+    gone rather than malformed, and nothing in the reply can be salvaged.
+
+    `authored_by` is stamped after parsing and replaces anything the model wrote
+    there, because a model naming itself would be attesting to its own identity."""
     try:
-        return parse_tape(ask_model(prompt))
+        reply = ask_model(prompt)
+        tape = parse_tape(reply.text)
     except SystemExit:
         print('  no JSON in the reply, asking again', file=sys.stderr)
-        return parse_tape(ask_model(prompt + NUDGE))
+        reply = ask_model(prompt + NUDGE)
+        tape = parse_tape(reply.text)
+    tape['authored_by'] = {'model': reply.model, 'claude_version': claude_version()}
+    return tape
 
 
 def strip_fences(raw: str) -> str:

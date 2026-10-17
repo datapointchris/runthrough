@@ -23,11 +23,12 @@ def replies(monkeypatch):
     def queue(*answers: str) -> list[str]:
         remaining = list(answers)
 
-        def fake_ask_model(prompt: str, **_: object) -> str:
+        def fake_ask_model(prompt: str, **_: object) -> ask.Reply:
             prompts.append(prompt)
-            return remaining.pop(0)
+            return ask.Reply(text=remaining.pop(0), model='claude-test')
 
         monkeypatch.setattr(ask, 'ask_model', fake_ask_model)
+        monkeypatch.setattr(ask, 'claude_version', lambda: '9.9.9')
         return prompts
 
     return queue
@@ -38,6 +39,10 @@ class TestRequestTape:
         prompts = replies(TAPE)
         assert ask.request_tape('go')['name'] == 'A Tape'
         assert len(prompts) == 1
+
+    def test_the_author_stamp_replaces_whatever_the_model_claimed(self, replies):
+        replies('{"name": "A Tape", "authored_by": {"model": "self-reported"}, "steps": []}')
+        assert ask.request_tape('go')['authored_by'] == {'model': 'claude-test', 'claude_version': '9.9.9'}
 
     def test_a_closing_remark_with_no_tape_is_retried(self, replies):
         """The exact reply seen live."""

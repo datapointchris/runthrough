@@ -35,6 +35,11 @@ to execute anything. The recorder executes, and only after the tape passes a gua
 rejects chaining, redirects, inline scripts, commands outside a read-only allowlist, and
 anything longer than a person would plausibly type.
 
+A tape the model wrote carries `authored_by`: the model that answered and the `claude` version
+that asked it. Both are stamped after the reply is parsed, replacing anything the model put
+there, so the model never attests to its own identity. Two regenerations of one tape that
+differ then say whether the model changed or the command did.
+
 `runthrough ask` demonstrates one command, reading only that command's own help. It needs no
 configuration and works against anything with a `--help`, since it parses both rich/Typer
 panels and Cobra command lists.

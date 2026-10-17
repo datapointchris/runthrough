@@ -168,7 +168,7 @@ def route(question: str, routing: config_module.Routing) -> list[str]:
         ====================
         {semantic_hits(routing, question)}
         """)
-    raw = ask_model(prompt)
+    raw = ask_model(prompt).text
     match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
         raise SystemExit(f'router did not return a list:\n{raw}')
@@ -197,7 +197,7 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
         ===========
         {help_text}
         """)
-    raw = ask_model(prompt)
+    raw = ask_model(prompt).text
     match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
         return ''
