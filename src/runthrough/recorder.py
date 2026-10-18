@@ -283,8 +283,13 @@ def load_tape(path: Path) -> Tape:
 
 def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
     """A tool that resolves its paths through XDG is sandboxed by redirecting the
-    four XDG roots, without the recorder knowing what tool it is."""
-    environment = dict(os.environ)
+    four XDG roots, without the recorder knowing what tool it is.
+
+    Each step's stdout is a terminal, so a tool that pages would open the pager and
+    the recording would wait on a keypress nobody sends. No inherited pager setting
+    reaches a step, and every tool is pointed at `cat`. git and gh read a pager from
+    their own config ahead of PAGER, so each gets its own variable."""
+    environment = {key: value for key, value in os.environ.items() if not key.endswith('PAGER')}
     environment.update(
         TERM='xterm-256color',
         COLUMNS=str(tape.columns),
@@ -292,6 +297,11 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
         NO_COLOR='',
         FORCE_COLOR='1',
         PS1='',
+        PAGER='cat',
+        GIT_PAGER='cat',
+        GH_PAGER='cat',
+        MANPAGER='cat',
+        BAT_PAGING='never',
     )
     environment.pop('NO_COLOR')
 

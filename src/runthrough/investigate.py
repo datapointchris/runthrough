@@ -45,7 +45,6 @@ READ_COMMANDS = {
     'head',
     'hostname',
     'jq',
-    'less',
     'ls',
     'nl',
     'paste',
@@ -152,7 +151,6 @@ WRITING_ARGUMENTS = {
     'find': WritingArguments(
         primaries=frozenset({'-delete', '-exec', '-execdir', '-fls', '-fprint', '-fprint0', '-fprintf', '-ok', '-okdir'}),
     ),
-    'less': WritingArguments(letters='oO', long_flags=frozenset({'--log-file', '--LOG-FILE'}), takes_value='#bDhjkPptTxyz'),
     'rg': WritingArguments(long_flags=frozenset({'--pre'})),
     'sed': WritingArguments(
         letters='fi',
