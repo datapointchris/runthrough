@@ -97,6 +97,11 @@ Keep tapes, and regenerate pages.
 `play` runs a tape exactly as written. The guards below belong to `ask` and `investigate`, which run
 what a model wrote. A tape you wrote is yours, pipes and chaining included.
 
+Each step's output goes to a terminal, so a tool that pages would open its pager and wait for a
+keypress. Every step runs with its pager pointed at `cat`, so `git log` prints straight to the
+screen. A step still running after two minutes is killed with everything it started, and the
+recording stops on a line naming it.
+
 `sandbox: xdg` redirects `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME`
 into a `sandbox/` directory beside the page. That isolates local state and nothing else. The
 directory outlives the recording, so the next one into the same place starts from what the last one
