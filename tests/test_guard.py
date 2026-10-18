@@ -56,6 +56,7 @@ class TestCheckCommand:
             "sed -n 's/old/new/p' notes.txt",
             "awk -F'|' '{print $2}' notes.txt",
             'rg deploy src/',
+            'rg do notes.txt',
         ],
     )
     def test_accepts_what_a_person_would_type(self, command):

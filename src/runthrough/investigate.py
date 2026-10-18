@@ -218,7 +218,9 @@ def writing_argument(words: list[str]) -> str | None:
 
 
 FORBIDDEN = re.compile(r"(&&|\|\||;|`|\bsudo\b|\bssh\b|-c\s+['\"])")
-LOOPS = re.compile(r'\b(for|while|until|do|done|if|then|fi|function)\b')
+# The shell reads these as keywords only at command position. Anywhere else they are
+# data: `rg do notes.txt` searches for the word.
+SHELL_KEYWORDS = {'do', 'done', 'fi', 'for', 'function', 'if', 'then', 'until', 'while'}
 
 TAPE_SCHEMA = """\
 {
@@ -430,7 +432,7 @@ def segments(command: str) -> list[str]:
 def check_command(command: str, allowed: set[str]) -> None:
     if len(command) > 160:
         raise SystemExit(f'too long to be typed by hand ({len(command)} chars): {command}')
-    if FORBIDDEN.search(command) or LOOPS.search(command):
+    if FORBIDDEN.search(command):
         raise SystemExit(f'not something a person types inline: {command}')
     if redirect := file_redirect(command):
         raise SystemExit(f'refusing a redirect that writes a file ({redirect}): {command}')
@@ -444,6 +446,8 @@ def check_command(command: str, allowed: set[str]) -> None:
             raise SystemExit(f'unbalanced quoting: {command}') from None
         if not words:
             continue
+        if words[0] in SHELL_KEYWORDS:
+            raise SystemExit(f'not something a person types inline: {command}')
         if words[0] not in allowed:
             raise SystemExit(f'command not in the read-only allowlist: {words[0]}')
         if writer := writing_argument(words):
