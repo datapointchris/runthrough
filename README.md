@@ -8,8 +8,8 @@ renders a self-contained HTML page. Nothing on that screen is authored by hand. 
 point: a hand-written demo keeps playing perfectly long after the flag it teaches has been renamed.
 
 It is not a screen recorder. Nobody sits at the keyboard during a recording, so one tape records
-again after every release. A model can write the tape from a question in English. The model never runs anything. It
-writes the tape, a guard reads it, and the recorder runs it.
+again after every release. A model can write the tape from a question in English. The model never
+runs anything. It writes the tape, a guard reads it, and the recorder runs it.
 
 ## Install
 
@@ -92,10 +92,7 @@ steps:                                                # required
 playback sits on silence, so a slow command plays fast and none of its output changes. `env` sets
 variables for every step.
 
-A synthetic animation is documentation that cannot fail. It rots silently. The CLI changes, the demo
-still plays, and it now teaches something false. Executing the tape inverts that. When a command
-loses a flag, the recorder captures the error onto the screen, where it is impossible to miss. So
-regenerating the library after a release doubles as a drift check. Keep tapes, and regenerate pages.
+Keep tapes, and regenerate pages.
 
 `play` runs a tape exactly as written. The guards below belong to `ask` and `investigate`, which run
 what a model wrote. A tape you wrote is yours, pipes and chaining included.
@@ -160,8 +157,7 @@ Anything that prints a list works as an inventory. Anything that searches text w
 
 It runs both, and a model picks the tools whose help is worth reading. It reads that help, then
 **probes**. A model names two or three orienting commands, and each one runs for real. Their output
-goes to the model before it writes anything. That step is not optional polish. Help text describes
-flags and never describes values. Without a look at the data, the model invents field names and
+goes to the model before it writes anything. Help text describes flags and never describes values. Without a look at the data, the model invents field names and
 greps for hostnames the records do not contain.
 
 The probes run before any tape is shown, so they pass the same guard as the steps. It allows pipes,
