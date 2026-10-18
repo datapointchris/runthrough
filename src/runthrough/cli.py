@@ -87,6 +87,18 @@ def open_page(path: Path) -> None:
     )
 
 
+def require_claude() -> None:
+    """Stop before any work when the CLI that writes the tape is missing. `investigate`
+    would otherwise run the routing commands first and then die in a traceback."""
+    if shutil.which('claude') is None:
+        err.print(
+            'claude is not on PATH. ask and investigate write the tape through Claude Code. '
+            'Install it from https://code.claude.com/docs/en/setup, then run claude once to log in.',
+            soft_wrap=True,
+        )
+        raise typer.Exit(1)
+
+
 def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')[:48]
 
@@ -139,7 +151,7 @@ def ask(
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Ask one command to show you something, reading only its own help."""
-
+    require_claude()
     if shutil.which(cli) is None:
         raise typer.BadParameter(f'{cli} is not installed')
 
@@ -164,6 +176,7 @@ def investigate(
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Ask a question that spans tools, and let it find which ones to use."""
+    require_claude()
     asked = ' '.join(question)
     routing = config_module.load().routing
     if not routing.configured:
