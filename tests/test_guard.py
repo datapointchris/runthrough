@@ -14,7 +14,7 @@ from runthrough.investigate import check_command
 from runthrough.investigate import segments
 from runthrough.investigate import split_pipeline
 
-ALLOWED = READ_COMMANDS | {'deploy', 'notes'}
+ALLOWED = READ_COMMANDS | {'deploy', 'git', 'notes'}
 
 
 class TestSplitPipeline:
@@ -51,6 +51,7 @@ class TestCheckCommand:
             'deploy runs list | rg staging',
             'notes search "deployment rollback" --limit 3',
             'jq . "$(deploy runs path abc123)"',
+            'git log --oneline -5',
         ],
     )
     def test_accepts_what_a_person_would_type(self, command):

@@ -78,7 +78,6 @@ MUTATING_WORDS = {
     'edit',
     'install',
     'kill',
-    'log',
     'merge',
     'mkdir',
     'mv',
