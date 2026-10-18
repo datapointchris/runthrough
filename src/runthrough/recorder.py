@@ -296,7 +296,6 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
         TERM='xterm-256color',
         COLUMNS=str(tape.columns),
         LINES=str(tape.rows),
-        NO_COLOR='',
         FORCE_COLOR='1',
         PS1='',
         PAGER='cat',
@@ -305,7 +304,7 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
         MANPAGER='cat',
         BAT_PAGING='never',
     )
-    environment.pop('NO_COLOR')
+    environment.pop('NO_COLOR', None)
 
     if tape.sandbox == 'xdg':
         for variable, leaf in (
