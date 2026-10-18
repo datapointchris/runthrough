@@ -13,19 +13,22 @@ runs anything. It writes the tape, a guard reads it, and the recorder runs it.
 
 ## Install
 
-runthrough installs as a uv tool, from a tagged release. It needs Python 3.13 or later.
+runthrough installs as a uv tool, from the package index every release is published to. It needs
+Python 3.13 or later.
 
 ```bash
-tag=$(git ls-remote --tags --refs --sort=-v:refname https://github.com/datapointchris/runthrough 'v*' | head -1 | cut -d/ -f3)
-uv tool install "git+https://github.com/datapointchris/runthrough@$tag"   # the newest release
-runthrough --version                                                        # the release, and the commit it was built from
-runthrough update --check                                                   # whether a newer release exists
+uv tool install --index https://pypi.ichrisbirch.com/simple/ runthrough   # the newest release
+runthrough --version                                                       # the release, and the commit it was built from
+runthrough update --check                                                  # whether a newer release exists
 ```
 
+Name the index on the install: without it uv asks PyPI, which does not carry runthrough. uv records
+the index beside the tool, which is where `runthrough update` reads it back.
+
 `runthrough update` reinstalls the newest release over the running one. It refuses an install from
-a local checkout or from a branch, because neither carries a release version to compare. Install
-from a tag to keep it updatable. Every other command checks for a newer release at most once a day,
-and names one it finds in a line on stderr. Setting `RUNTHROUGH_NO_AUTO_UPDATE` turns that check
+a local checkout or from a branch, because neither carries a release version to compare. Every
+other command checks for a newer release at most once a day, and names one it finds in a line on
+stderr. Setting `RUNTHROUGH_NO_AUTO_UPDATE` turns that check
 off.
 
 Three programs sit outside the install:
