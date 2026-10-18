@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import codecs
+import contextlib
 import fcntl
 import html
 import io
@@ -16,6 +17,7 @@ import os
 import pty
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -320,7 +322,18 @@ def build_environment(tape: Tape, sandbox_root: Path) -> dict[str, str]:
     return environment
 
 
-def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows: int) -> list[tuple[float, bytes]]:
+# A demo step that has not finished in this many seconds is waiting on something
+# nobody will send, and without a bound it would hold the recording forever.
+STEP_DEADLINE = 120.0
+
+
+def execute_in_pty(
+    command: str,
+    environment: dict[str, str],
+    columns: int,
+    rows: int,
+    deadline: float = STEP_DEADLINE,
+) -> list[tuple[float, bytes]]:
     master, slave = pty.openpty()
     termios.tcsetattr(slave, termios.TCSANOW, termios.tcgetattr(slave))
 
@@ -340,7 +353,12 @@ def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows
 
     events: list[tuple[float, bytes]] = []
     started = time.monotonic()
+    give_up = started + deadline
+    timed_out = False
     while True:
+        if time.monotonic() > give_up:
+            timed_out = True
+            break
         readable, _, _ = select.select([master], [], [], 0.05)
         if readable:
             try:
@@ -353,7 +371,10 @@ def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows
         elif process.poll() is not None:
             break
 
-    while True:
+    while not timed_out:
+        if time.monotonic() > give_up:
+            timed_out = True
+            break
         readable, _, _ = select.select([master], [], [], 0.05)
         if not readable:
             break
@@ -366,7 +387,17 @@ def execute_in_pty(command: str, environment: dict[str, str], columns: int, rows
         events.append((time.monotonic() - started, chunk))
 
     os.close(master)
-    process.wait()
+    if not timed_out:
+        try:
+            process.wait(timeout=max(0.0, give_up - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+    if timed_out:
+        # The step runs in its own session, so its process group holds everything it started.
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        raise SystemExit(f'step still running after {deadline:.0f}s, so the recording stopped: {command}')
     return events
 
 
