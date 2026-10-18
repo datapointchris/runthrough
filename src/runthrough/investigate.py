@@ -10,12 +10,14 @@ tools, pipes allowed, inline shell scripts never.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import json
 import re
 import shlex
 import subprocess
 import sys
 import textwrap
+from collections.abc import Callable
 
 from runthrough import config as config_module
 from runthrough.ask import ask_model
@@ -101,6 +103,120 @@ MUTATING_WORDS = {
     'upgrade',
     'write',
 }
+
+
+def sed_script_writes(script: str) -> bool:
+    """A sed script's `w` and `W` commands write a file and its `e` command runs one,
+    as do the `w` and `e` flags of `s`. Each follows the start, a separator, an
+    address, or the closing delimiter of `s` and its flags, and is followed by a space."""
+    return bool(re.search(r'(?:^|[;{}\n$\d/]|/[gpiImMe\d]*)\s*[wWe](?:\s|$)', script))
+
+
+def awk_program_writes(program: str) -> bool:
+    """`system()` runs a command, and so does a `|` to or from one. Strings and regex
+    literals are dropped first, because `split($0, a, "|")` and `/a|b/` pipe nothing.
+    Writing to a file needs `>`, which the redirect check refuses wherever it appears."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '', program)
+    code = re.sub(r'/(?:\\.|[^/\\\n])*/', '', code)
+    return '|' in code or bool(re.search(r'\bsystem\s*\(', code))
+
+
+@dc.dataclass(frozen=True)
+class WritingArguments:
+    """What makes one allowlisted read command write a file or run another program."""
+
+    letters: str = ''  # short flags, caught alone or inside a bundle such as `-ni` or `-i.bak`
+    long_flags: frozenset[str] = frozenset()  # also caught as a GNU abbreviation or with `=value`
+    primaries: frozenset[str] = frozenset()  # find's, matched whole
+    subcommands: frozenset[str] = frozenset()
+    # Short flags whose value ends a bundle, so `-F,` or `-ojson` is never read as flags.
+    takes_value: str = ''
+    long_values: frozenset[str] = frozenset()
+    operands: int | None = None  # uniq writes its second operand
+    # Reads a sed script or an awk program, given as an operand or as a script flag's value.
+    script: Callable[[str], bool] | None = None
+    script_flags: frozenset[str] = frozenset()
+
+
+WRITING_ARGUMENTS = {
+    'awk': WritingArguments(
+        letters='dDEfilop',
+        long_flags=frozenset({'--debug', '--dump-variables', '--exec', '--file', '--include', '--load', '--pretty-print', '--profile'}),
+        takes_value='vF',
+        script=awk_program_writes,
+        script_flags=frozenset({'--source'}),
+    ),
+    'bat': WritingArguments(long_flags=frozenset({'--pager'}), subcommands=frozenset({'cache'})),
+    'fd': WritingArguments(letters='xX', long_flags=frozenset({'--exec', '--exec-batch'}), takes_value='cCdEejoSt'),
+    'file': WritingArguments(letters='C', long_flags=frozenset({'--compile'}), takes_value='eFfmP'),
+    'find': WritingArguments(
+        primaries=frozenset({'-delete', '-exec', '-execdir', '-fls', '-fprint', '-fprint0', '-fprintf', '-ok', '-okdir'}),
+    ),
+    'less': WritingArguments(letters='oO', long_flags=frozenset({'--log-file', '--LOG-FILE'}), takes_value='#bDhjkPptTxyz'),
+    'rg': WritingArguments(long_flags=frozenset({'--pre'})),
+    'sed': WritingArguments(
+        letters='fi',
+        long_flags=frozenset({'--file', '--in-place'}),
+        takes_value='l',
+        script=sed_script_writes,
+        script_flags=frozenset({'--expression'}),
+    ),
+    'sort': WritingArguments(letters='o', long_flags=frozenset({'--compress-program', '--output'}), takes_value='kSTt'),
+    'uniq': WritingArguments(
+        takes_value='fsw',
+        long_values=frozenset({'--check-chars', '--skip-chars', '--skip-fields'}),
+        operands=1,
+    ),
+    'yq': WritingArguments(letters='is', long_flags=frozenset({'--inplace', '--split-exp'}), takes_value='fIop'),
+    'zoxide': WritingArguments(subcommands=frozenset({'add', 'edit', 'import', 'remove'})),
+}
+
+
+def writing_argument(words: list[str]) -> str | None:
+    """The argument that would make an allowlisted read command write a file or run
+    another program, or None. A sed or awk script read from a file cannot be checked,
+    so `-f` counts as one."""
+    rules = WRITING_ARGUMENTS.get(words[0])
+    if rules is None:
+        return None
+    if len(words) > 1 and words[1] in rules.subcommands:
+        return words[1]
+
+    operands: list[str] = []
+    options_ended = value_follows = False
+    for word in words[1:]:
+        if value_follows:
+            value_follows = False
+        elif options_ended or word == '-' or not word.startswith('-'):
+            operands.append(word)
+        elif word == '--':
+            options_ended = True
+        elif word.startswith('--'):
+            name, _, value = word.partition('=')
+            if any(flag.startswith(name) for flag in rules.long_flags):
+                return word
+            if value and rules.script and any(flag.startswith(name) for flag in rules.script_flags) and rules.script(value):
+                return word
+            value_follows = name in rules.long_values and not value
+        elif word in rules.primaries:
+            return word
+        else:
+            for position, letter in enumerate(word[1:], start=2):
+                if letter in rules.letters:
+                    return word
+                if letter in rules.takes_value:
+                    value_follows = position == len(word)
+                    break
+
+    if rules.script:
+        for operand in operands:
+            if rules.script(operand):
+                return operand
+    if rules.operands is not None and len(operands) > rules.operands:
+        return operands[rules.operands]
+    return None
+
+
 FORBIDDEN = re.compile(r"(&&|\|\||;|`|\bsudo\b|\bssh\b|-c\s+['\"])")
 LOOPS = re.compile(r'\b(for|while|until|do|done|if|then|fi|function)\b')
 
@@ -318,6 +434,8 @@ def check_command(command: str, allowed: set[str]) -> None:
             continue
         if words[0] not in allowed:
             raise SystemExit(f'command not in the read-only allowlist: {words[0]}')
+        if writer := writing_argument(words):
+            raise SystemExit(f'refusing {writer}, which lets {words[0]} write a file or run a command: {command}')
         for word in words[1:]:
             # Only the subcommand path is checked. `--verb apply` is a filter value,
             # not an apply, and blocking it would rule out most report queries.

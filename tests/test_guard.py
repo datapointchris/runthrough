@@ -53,6 +53,7 @@ class TestCheckCommand:
             'jq . "$(deploy runs path abc123)"',
             'git log --oneline -5',
             'deploy runs list 2>/dev/null | rg staging',
+            "sed -n 's/old/new/p' notes.txt",
         ],
     )
     def test_accepts_what_a_person_would_type(self, command):
@@ -82,6 +83,15 @@ class TestCheckCommand:
             'bash -c "deploy runs list"',
             'sudo deploy runs list',
             'ssh buildbox deploy runs list',
+            "sed -i 's/old/new/' notes.txt",
+            "sed 's/old/new/w out.txt' notes.txt",
+            'awk \'{system("date")}\' notes.txt',
+            'sort -o sorted.txt notes.txt',
+            'uniq notes.txt out.txt',
+            'find . -delete',
+            'find . -fprint out.txt',
+            'fd -e md -x cat',
+            'zoxide add /tmp',
         ],
     )
     def test_rejects_what_a_person_would_not_type_inline(self, command):

@@ -171,6 +171,9 @@ not a pipe stage. The guard refuses:
 - `sudo`, `ssh`, an inline `-c` script, and a shell loop or conditional
 - a command outside the read-only allowlist, which is `READ_COMMANDS` in
   `src/runthrough/investigate.py` plus each tool the router picked
+- an argument that makes an allowlisted command write a file or run another, such as `sed -i`,
+  `sort -o`, `find -delete`, a sed `w` command or an awk `system()`, as `WRITING_ARGUMENTS` in the
+  same file lists them
 - a mutating verb in a subcommand path, where `--verb apply` is a filter value and passes
 - a pipeline or a line longer than a person would plausibly type
 
