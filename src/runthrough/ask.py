@@ -17,7 +17,10 @@ from typing import NamedTuple
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 COMMAND_HEADING = re.compile(r'(Available Commands:|Commands\s*$|Commands\s*[─╮])')
 SUBCOMMAND = re.compile(r'^[│|]?\s{0,4}([a-z][a-z0-9-]{1,30})\s{2,}\S')
-CHAINING = re.compile(r'[;&|`]|\$\(|>>|(?<![0-9])>')
+CHAINING = re.compile(r'[;&|`]|\$\(')
+# An output redirect: an optional descriptor or `&`, then `>`, `>>` or `>|`, then its target.
+REDIRECT = re.compile(r'(?:\d+|&)?>[>|]?\s*(&\d+|&-|[^\s|;&<>()]*)')
+WRITES_NO_FILE = re.compile(r'/dev/null|&(?:\d+|-)')
 
 TAPE_SCHEMA = """\
 {
@@ -267,6 +270,17 @@ def parse_tape(raw: str) -> dict:
     return json.loads(match.group(0))
 
 
+def file_redirect(command: str) -> str | None:
+    """The first redirect in `command` that writes a file, as written, or None.
+
+    The descriptor is part of the match, so `2>out.txt` and `1>x` are caught
+    alongside a bare `>`. `>/dev/null` and `2>&1` write no file and pass."""
+    for match in REDIRECT.finditer(command):
+        if not WRITES_NO_FILE.fullmatch(match.group(1)):
+            return match.group(0)
+    return None
+
+
 def validate_tape(tape: dict, cli: str) -> dict:
     if 'steps' not in tape:
         raise SystemExit('model did not return a tape')
@@ -274,7 +288,9 @@ def validate_tape(tape: dict, cli: str) -> dict:
     for step in tape['steps']:
         command = step.get('run', '')
         if CHAINING.search(command):
-            raise SystemExit(f'refusing chained or redirecting command: {command}')
+            raise SystemExit(f'refusing chained command: {command}')
+        if redirect := file_redirect(command):
+            raise SystemExit(f'refusing a redirect that writes a file ({redirect}): {command}')
         if command.split()[:1] != [cli]:
             raise SystemExit(f'refusing command that is not {cli}: {command}')
     return tape

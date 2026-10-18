@@ -123,8 +123,9 @@ is a deny list because `--allowedTools` pre-approves tools and leaves the rest r
 recorder executes, and only after the tape passes a guard.
 
 `ask`'s guard holds each step to one invocation of the named command. It refuses a pipe, `;`, `&`,
-a backtick, `$(`, and a bare `>` or `>>`. It does not judge whether a command writes. The printed
-tape and the confirmation are for that. The prompt tells the model to set `sandbox: xdg` when any
+a backtick and `$(`. It refuses a redirect that writes a file, with or without a descriptor number,
+so `2>out.txt` is refused and `2>/dev/null` passes. Past that, it does not judge whether a command
+writes. The printed tape and the confirmation are for that. The prompt tells the model to set `sandbox: xdg` when any
 step creates, edits or deletes data. `--sandbox` sets it regardless.
 
 `ask` needs no configuration. It works against anything with a `--help`, because it parses both
@@ -157,14 +158,16 @@ Anything that prints a list works as an inventory. Anything that searches text w
 
 It runs both, and a model picks the tools whose help is worth reading. It reads that help, then
 **probes**. A model names two or three orienting commands, and each one runs for real. Their output
-goes to the model before it writes anything. Help text describes flags and never describes values. Without a look at the data, the model invents field names and
-greps for hostnames the records do not contain.
+goes to the model before it writes anything. Help text describes flags and never describes values.
+Without a look at the data, the model invents field names and greps for hostnames the records do
+not contain.
 
 The probes run before any tape is shown, so they pass the same guard as the steps. It allows pipes,
 because a pipeline is much of what makes a query worth teaching. A `|` inside a quoted jq filter is
 not a pipe stage. The guard refuses:
 
-- chaining with `;`, `&&` or `||`, a bare `>` or `>>`, and a backtick
+- chaining with `;`, `&&` or `||`, and a backtick
+- a redirect that writes a file, where `2>/dev/null` and `2>&1` write none and pass
 - `sudo`, `ssh`, an inline `-c` script, and a shell loop or conditional
 - a command outside the read-only allowlist, which is `READ_COMMANDS` in
   `src/runthrough/investigate.py` plus each tool the router picked

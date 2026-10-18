@@ -52,6 +52,7 @@ class TestCheckCommand:
             'notes search "deployment rollback" --limit 3',
             'jq . "$(deploy runs path abc123)"',
             'git log --oneline -5',
+            'deploy runs list 2>/dev/null | rg staging',
         ],
     )
     def test_accepts_what_a_person_would_type(self, command):
@@ -75,6 +76,7 @@ class TestCheckCommand:
         [
             'deploy runs list > out.txt',
             'deploy runs list >> out.txt',
+            'deploy runs list 2>out.txt',
             'deploy runs list && rg staging',
             'deploy runs list; rg staging',
             'bash -c "deploy runs list"',

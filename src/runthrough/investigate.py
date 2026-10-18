@@ -19,6 +19,7 @@ import textwrap
 
 from runthrough import config as config_module
 from runthrough.ask import ask_model
+from runthrough.ask import file_redirect
 from runthrough.ask import request_tape
 from runthrough.ask import strip_ansi
 
@@ -100,7 +101,7 @@ MUTATING_WORDS = {
     'upgrade',
     'write',
 }
-FORBIDDEN = re.compile(r"(>>|(?<![0-9])>|&&|\|\||;|`|\bsudo\b|\bssh\b|-c\s+['\"])")
+FORBIDDEN = re.compile(r"(&&|\|\||;|`|\bsudo\b|\bssh\b|-c\s+['\"])")
 LOOPS = re.compile(r'\b(for|while|until|do|done|if|then|fi|function)\b')
 
 TAPE_SCHEMA = """\
@@ -306,6 +307,8 @@ def check_command(command: str, allowed: set[str]) -> None:
         raise SystemExit(f'too long to be typed by hand ({len(command)} chars): {command}')
     if FORBIDDEN.search(command) or LOOPS.search(command):
         raise SystemExit(f'not something a person types inline: {command}')
+    if redirect := file_redirect(command):
+        raise SystemExit(f'refusing a redirect that writes a file ({redirect}): {command}')
     if len(split_pipeline(re.sub(r'\$\(.*?\)', ' ', command))) > 4:
         raise SystemExit(f'too many pipe stages: {command}')
 
