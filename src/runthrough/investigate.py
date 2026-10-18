@@ -394,18 +394,27 @@ def author(question: str, help_text: str, observations: str) -> dict:
 
 def split_pipeline(text: str) -> list[str]:
     """Split on shell pipes only. A jq filter is full of `|` that never reaches the
-    shell, and counting those rejects exactly the commands worth demonstrating."""
-    lexer = shlex.shlex(text, posix=False, punctuation_chars=True)
-    lexer.whitespace_split = True
+    shell, and counting those rejects exactly the commands worth demonstrating.
+
+    A quote opens wherever it appears, as it does in the shell, so `-F'|'` is one
+    word. Each stage is returned as written, quotes included, for `shlex.split`."""
     stages: list[str] = []
-    current: list[str] = []
-    for token in lexer:
-        if token == '|':
-            stages.append(' '.join(current))
-            current = []
-        else:
-            current.append(token)
-    stages.append(' '.join(current))
+    start = 0
+    quote = ''
+    escaped = False
+    for index, character in enumerate(text):
+        if escaped:
+            escaped = False
+        elif character == '\\' and quote != "'":
+            escaped = True
+        elif quote:
+            quote = '' if character == quote else quote
+        elif character in '\'"':
+            quote = character
+        elif character == '|':
+            stages.append(text[start:index])
+            start = index + 1
+    stages.append(text[start:])
     return [stage.strip() for stage in stages if stage.strip()]
 
 
@@ -429,7 +438,10 @@ def check_command(command: str, allowed: set[str]) -> None:
         raise SystemExit(f'too many pipe stages: {command}')
 
     for segment in segments(command):
-        words = shlex.split(segment)
+        try:
+            words = shlex.split(segment)
+        except ValueError:
+            raise SystemExit(f'unbalanced quoting: {command}') from None
         if not words:
             continue
         if words[0] not in allowed:
