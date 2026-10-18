@@ -91,7 +91,7 @@ def resolve_font_file(family: str, bold: bool) -> Path | None:
 def embed_font(path: Path, codepoints: set[int]) -> str | None:
     """A Nerd Font ships thousands of icon glyphs and runs to megabytes. Subset to
     the codepoints this page actually paints, or the artifact is mostly font."""
-    # 430ms → 320ms on `runthrough --help`, 2026-10-10
+    # Imported here: at module level, fontTools takes `runthrough --help` from 320ms to 430ms.
     from fontTools.subset import Options
     from fontTools.subset import Subsetter
     from fontTools.ttLib import TTFont
