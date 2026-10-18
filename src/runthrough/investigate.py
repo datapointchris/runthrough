@@ -448,6 +448,10 @@ def check_command(command: str, allowed: set[str]) -> None:
             raise SystemExit(f'command not in the read-only allowlist: {words[0]}')
         if writer := writing_argument(words):
             raise SystemExit(f'refusing {writer}, which lets {words[0]} write a file or run a command: {command}')
+        if words[0] in READ_COMMANDS:
+            # A read command takes patterns and paths, never a subcommand, so a verb
+            # among them is data: `rg deploy src/` searches for the word.
+            continue
         for word in words[1:]:
             # Only the subcommand path is checked. `--verb apply` is a filter value,
             # not an apply, and blocking it would rule out most report queries.

@@ -44,8 +44,8 @@ by a test:
 
 - Pipe splitting is quote-aware. A jq filter is full of `|` that never reaches the shell, and
   counting those rejects exactly the commands most worth teaching.
-- Only the subcommand path is checked for mutating verbs. `--verb apply` is a filter value,
-  not an apply.
+- Only a routed tool's subcommand path is checked for mutating verbs. `--verb apply` is a
+  filter value, not an apply, and `deploy` in `rg deploy src/` is a search pattern.
 - A redirect is read with its descriptor. `2>out.txt` writes a file as surely as `>out.txt`,
   while `>/dev/null` and `2>&1` write none.
 - A `?` prefix on a `config-file` include is ghostty's suppress-if-absent marker, not part of

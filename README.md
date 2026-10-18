@@ -174,7 +174,9 @@ not a pipe stage. The guard refuses:
 - an argument that makes an allowlisted command write a file or run another, such as `sed -i`,
   `sort -o`, `find -delete`, a sed `w` command or an awk `system()`, as `WRITING_ARGUMENTS` in the
   same file lists them
-- a mutating verb in a subcommand path, where `--verb apply` is a filter value and passes
+- a mutating verb in the subcommand path of a tool the router picked, where `--verb apply` is a
+  filter value and passes. An allowlisted command takes patterns and paths rather than
+  subcommands, so `rg deploy src/` passes too.
 - a pipeline or a line longer than a person would plausibly type
 
 A question that asserts something false still gets an investigation. The authoring prompt asks for
