@@ -107,8 +107,9 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
         if force_sandbox
         else (
             'Set `sandbox: xdg` if ANY step creates, edits or deletes data — that '
-            'redirects the XDG roots to a throwaway directory. Use `sandbox: none` '
-            'only when every step is purely a read.'
+            'points the XDG roots at a sandbox directory beside the recording, away '
+            "from the user's own data, and that directory is kept between recordings. "
+            'Use `sandbox: none` only when every step is purely a read.'
         )
     )
 

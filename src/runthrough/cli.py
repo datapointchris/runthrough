@@ -144,7 +144,12 @@ def play(
 def ask(
     question: Annotated[list[str], typer.Argument(help='What you want shown, in English.')],
     cli: Annotated[str, typer.Option('--cli', help='Which command to demonstrate.')],
-    sandbox: Annotated[bool, typer.Option('--sandbox', help='Redirect XDG roots to a throwaway dir.')] = False,
+    sandbox: Annotated[
+        bool,
+        typer.Option(
+            '--sandbox', help='For a demo that writes: point the XDG roots at sandbox/ beside the page, which is kept between recordings.'
+        ),
+    ] = False,
     yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
     budget: Annotated[int, typer.Option('--budget', help='Help-text characters to read.')] = 40000,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,

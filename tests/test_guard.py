@@ -1,8 +1,8 @@
 """The guard decides what is allowed to execute, so its edges are the tests.
 
-Every case here is a real failure or a real near-miss from building the tool,
-not a hypothetical: the jq pipes and the `--verb apply` filter both rejected
-legitimate commands before they were fixed.
+Each case is a command a model writes for real. A jq filter full of `|` and a
+`--verb apply` filter value are both legitimate, and a guard that counts
+characters or checks every word refuses them.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ class TestSplitPipeline:
         ]
 
     def test_a_jq_filters_pipes_are_not_shell_pipes(self):
-        """This rejected the commands most worth teaching."""
+        """Splitting on every `|` refuses the commands most worth teaching."""
         stages = split_pipeline("""jq '..|objects|select(.kind)'""")
         assert len(stages) == 1
 
@@ -60,7 +60,7 @@ class TestCheckCommand:
 
     def test_accepts_a_real_pipe_into_a_jq_filter_full_of_pipes(self):
         """Four `|` characters, one of them a shell pipe. Counting the character
-        instead of splitting on it rejected this, which is the whole idiom."""
+        instead of splitting on it refuses this, and it is the whole idiom."""
         check_command("deploy runs list | jq '..|objects|select(.a)|.b'", ALLOWED)
 
     def test_accepts_a_mutating_word_as_a_flag_value(self):

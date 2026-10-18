@@ -1,8 +1,8 @@
 """What this machine supplies: how to route a question, and what the terminal looks like.
 
-Both used to be literals in the source — two commands from one person's toolkit, and
-one theme generator's output layout. Neither is a property of recording a terminal,
-so both are read from here and the tool works without either.
+Neither is a property of recording a terminal, so neither is written into the source.
+Both come from the user's config file. Every key is optional, and only `investigate`
+refuses to run without the routing pair.
 """
 
 from __future__ import annotations
