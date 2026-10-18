@@ -210,17 +210,25 @@ def primary_model(usage: object) -> str:
     return str((entry or {}).get('canonicalModel') or name)
 
 
+class ModelTimedOut(SystemExit):
+    """`claude` ran past its deadline. Asking again would wait as long a second time,
+    so `request_tape` lets this through instead of retrying it."""
+
+
 def ask_model(prompt: str, timeout: int = 420) -> Reply:
     """The one door to the model. It is never given tools: it reads help text and
     probe output as plain text and returns a tape, and the recorder does the running."""
-    result = subprocess.run(
-        model_argv(),
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            model_argv(),
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise ModelTimedOut(f'claude timed out after {timeout}s') from None
     printed = frames(result.stdout)
     # Searched from the end, because nothing promises the result stays the last frame.
     frame = next((f for f in reversed(printed) if f.get('type') == 'result'), None)
@@ -246,6 +254,8 @@ def request_tape(prompt: str) -> dict:
     try:
         reply = ask_model(prompt)
         tape = parse_tape(reply.text)
+    except ModelTimedOut:
+        raise
     except SystemExit:
         print('  no JSON in the reply, asking again', file=sys.stderr)
         reply = ask_model(prompt + NUDGE)
