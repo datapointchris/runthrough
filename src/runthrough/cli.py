@@ -24,10 +24,23 @@ from runthrough import config as config_module
 from runthrough import investigate as investigate_module
 from runthrough.recorder import record
 
+
+def examples(*rows: tuple[str, str]) -> str:
+    """A help epilog listing each command beside the situation it answers, commands aligned.
+    Keep each row inside 78 characters, the width an 80-column terminal leaves inside rich's padding."""
+    width = max(len(command) for command, _ in rows)
+    return 'Examples:\n' + '\n'.join(f'{command.ljust(width)}   {situation}' for command, situation in rows)
+
+
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=True,
     help='Record what you actually typed, and what it actually printed.',
+    epilog=examples(
+        ('runthrough ask --cli git "who changed what"', "a demo written from git's help"),
+        ('runthrough play demo.tape.yml', 'check a kept tape still holds'),
+        ('runthrough library', 'every tape you have kept'),
+    ),
 )
 err = Console(stderr=True)
 
@@ -123,7 +136,14 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
     return page_path
 
 
-@app.command(rich_help_panel='Recording')
+@app.command(
+    rich_help_panel='Recording',
+    epilog=examples(
+        ('runthrough play demo.tape.yml', 'record demo.html and open it'),
+        ('runthrough play demo.tape.yml --no-watch', 'the same, with no browser'),
+        ('runthrough play demo.tape.yml --cast demo.cast', 'also an asciicast v2 file'),
+    ),
+)
 def play(
     tape: Annotated[Path, typer.Argument(help='A tape file to execute and record.')],
     out: Annotated[Path | None, typer.Option('--out', help='Where to write the page.')] = None,
@@ -140,7 +160,13 @@ def play(
         open_page(page)
 
 
-@app.command(rich_help_panel='Asking')
+@app.command(
+    rich_help_panel='Asking',
+    epilog=examples(
+        ('runthrough ask --cli git "who changed what"', 'write a tape, record on y'),
+        ('runthrough ask --cli git --yes "who changed what"', 'record without asking'),
+    ),
+)
 def ask(
     question: Annotated[list[str], typer.Argument(help='What you want shown, in English.')],
     cli: Annotated[str, typer.Option('--cli', help='Which command to demonstrate.')],
@@ -172,7 +198,13 @@ def ask(
     produce(tape, asked, library, confirm=not yes, watch=watch)
 
 
-@app.command(rich_help_panel='Asking')
+@app.command(
+    rich_help_panel='Asking',
+    epilog=examples(
+        ('runthrough investigate "what failed today"', 'probe data, write a tape'),
+        ('runthrough investigate --yes "what failed today"', 'record without asking'),
+    ),
+)
 def investigate(
     question: Annotated[list[str], typer.Argument(help='What you want answered, in English.')],
     yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
@@ -215,7 +247,13 @@ def investigate(
     produce(tape, asked, library, confirm=not yes, watch=watch)
 
 
-@app.command(rich_help_panel='Library')
+@app.command(
+    rich_help_panel='Library',
+    epilog=examples(
+        ('runthrough library', 'every kept tape, and which have no page'),
+        ('runthrough library --json', 'the same list as JSON, for a script'),
+    ),
+)
 def library(
     path: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     as_json: Annotated[bool, typer.Option('--json', help='Output as JSON to stdout.')] = False,
@@ -250,7 +288,13 @@ def library(
         print(f'{entry["name"]}  —  {entry["title"]}{mark}')
 
 
-@app.command(rich_help_panel='Manage')
+@app.command(
+    rich_help_panel='Manage',
+    epilog=examples(
+        ('runthrough update --check', 'whether a newer release exists'),
+        ('runthrough update', 'install the newest release over this one'),
+    ),
+)
 def update(
     check_only: Annotated[bool, typer.Option('--check', help='Report whether an update is available without installing it.')] = False,
 ) -> None:
