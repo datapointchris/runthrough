@@ -35,7 +35,14 @@ def examples(*rows: tuple[str, str]) -> str:
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=True,
-    help='Record what you actually typed, and what it actually printed.',
+    help=(
+        'Record what you actually typed, and what it actually printed.\n\n'
+        'Start with ask --cli <command> to demo one command from its own help. '
+        'Reach for investigate instead when the question spans several tools '
+        'and runthrough should pick which ones. Both write a tape, then record it.\n\n'
+        'After that, play re-records a kept tape to check it still holds, '
+        'and library lists every tape you have kept.'
+    ),
     epilog=examples(
         ('runthrough ask --cli git "who changed what"', "a demo written from git's help"),
         ('runthrough play demo.tape.yml', 'check a kept tape still holds'),
