@@ -20,7 +20,6 @@ def test_update_installs_the_published_release(monkeypatch):
 
 
 def test_update_does_not_also_print_the_update_notice(monkeypatch, tmp_path):
-    # The notice would name the release the command is already installing.
     monkeypatch.setattr(cli, 'run_update', lambda config, **kwargs: None)
     notices = []
     monkeypatch.setattr(cli, 'notify', notices.append)
