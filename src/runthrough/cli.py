@@ -36,17 +36,30 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=True,
     help=(
-        'Record what you actually typed, and what it actually printed.\n\n'
-        'Start with ask --cli <command> to demo one command from its own help. '
-        'Reach for investigate instead when the question spans several tools '
-        'and runthrough should pick which ones. Both write a tape, then record it.\n\n'
-        'After that, play re-records a kept tape to check it still holds, '
-        'and library lists every tape you have kept.'
+        'Turn a question about a command into a recorded terminal demo. '
+        'The commands run for real, and the demo plays back as an HTML page.\n\n'
+        'A tape is the YAML list of commands a demo runs. '
+        'ask writes one for you, then records it.'
     ),
-    epilog=examples(
-        ('runthrough ask --cli git "who changed what"', "a demo written from git's help"),
-        ('runthrough play demo.tape.yml', 'check a kept tape still holds'),
-        ('runthrough library', 'every tape you have kept'),
+    epilog=(
+        'Your first demo:\n'
+        '1. cd into a directory the demo should run in, such as a git repo.\n'
+        '2. runthrough ask --cli git "show what changed and who changed it"\n'
+        "   Claude reads git's --help and prints a tape. Nothing has run yet.\n"
+        '3. Answer y to "record this? \\[y/N]".\n'
+        '   Each command runs, and the page opens in your browser.\n'
+        '4. The tape, page and .cast file are kept in ~/.local/share/runthrough/.\n'
+        '\n'
+        'Later:\n'
+        'runthrough library                    list every demo you kept\n'
+        'runthrough play <path>.tape.yml       record a kept tape again, against\n'
+        "                                      today's tools, to see it still works\n"
+        'runthrough investigate "<question>"   a demo across several tools; needs\n'
+        '                                      routing set in\n'
+        '                                      ~/.config/runthrough/config.yml\n'
+        '\n'
+        'ask and investigate need Claude Code (claude) installed and logged in.\n'
+        'play runs a tape with no model.'
     ),
 )
 err = Console(stderr=True)
@@ -91,7 +104,7 @@ def root(
         typer.Option('--version', callback=version_callback, is_eager=True, help='Show the installed version and exit.'),
     ] = None,
 ) -> None:
-    """Record what you actually typed, and what it actually printed."""
+    """Turn a question about a command into a recorded terminal demo."""
     # `update` is already installing the release the notice would name.
     if ctx.invoked_subcommand != 'update':
         notify(UPDATE_CONFIG)
@@ -144,39 +157,15 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
 
 
 @app.command(
-    rich_help_panel='Recording',
-    epilog=examples(
-        ('runthrough play demo.tape.yml', 'record demo.html and open it'),
-        ('runthrough play demo.tape.yml --no-watch', 'the same, with no browser'),
-        ('runthrough play demo.tape.yml --cast demo.cast', 'also an asciicast v2 file'),
-    ),
-)
-def play(
-    tape: Annotated[Path, typer.Argument(help='A tape file to execute and record.')],
-    out: Annotated[Path | None, typer.Option('--out', help='Where to write the page.')] = None,
-    cast: Annotated[Path | None, typer.Option('--cast', help='Also write an asciicast v2 file.')] = None,
-    fps: Annotated[int, typer.Option('--fps', help='Screen samples per second.')] = 14,
-    watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
-) -> None:
-    """Run a tape you already have and record it."""
-    if not tape.is_file():
-        raise typer.BadParameter(f'no such tape: {tape}')
-    page = out or tape.with_suffix('').with_suffix('.html')
-    record(tape, page, cast_path=cast, fps=fps)
-    if watch:
-        open_page(page)
-
-
-@app.command(
-    rich_help_panel='Asking',
+    rich_help_panel='Make a demo',
     epilog=examples(
         ('runthrough ask --cli git "who changed what"', 'write a tape, record on y'),
         ('runthrough ask --cli git --yes "who changed what"', 'record without asking'),
     ),
 )
 def ask(
-    question: Annotated[list[str], typer.Argument(help='What you want shown, in English.')],
-    cli: Annotated[str, typer.Option('--cli', help='Which command to demonstrate.')],
+    question: Annotated[list[str], typer.Argument(metavar='QUESTION...', help='What you want shown, in English.')],
+    cli: Annotated[str, typer.Option('--cli', metavar='COMMAND', help='The installed command to demonstrate, such as git.')],
     sandbox: Annotated[
         bool,
         typer.Option(
@@ -188,7 +177,7 @@ def ask(
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
-    """Ask one command to show you something, reading only its own help."""
+    """Demo one command: Claude reads its --help, writes a tape, and you record it."""
     require_claude()
     if shutil.which(cli) is None:
         raise typer.BadParameter(f'{cli} is not installed')
@@ -206,20 +195,20 @@ def ask(
 
 
 @app.command(
-    rich_help_panel='Asking',
+    rich_help_panel='Make a demo',
     epilog=examples(
         ('runthrough investigate "what failed today"', 'probe data, write a tape'),
         ('runthrough investigate --yes "what failed today"', 'record without asking'),
     ),
 )
 def investigate(
-    question: Annotated[list[str], typer.Argument(help='What you want answered, in English.')],
+    question: Annotated[list[str], typer.Argument(metavar='QUESTION...', help='What you want answered, in English.')],
     yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
     budget: Annotated[int, typer.Option('--budget', help='Help-text characters to read.')] = 30000,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
-    """Ask a question that spans tools, and let it find which ones to use."""
+    """Demo a question that spans tools: it picks the tools, writes a tape, and you record it."""
     require_claude()
     asked = ' '.join(question)
     routing = config_module.load().routing
@@ -255,7 +244,31 @@ def investigate(
 
 
 @app.command(
-    rich_help_panel='Library',
+    rich_help_panel='Use what you kept',
+    epilog=examples(
+        ('runthrough play demo.tape.yml', 'record demo.html and open it'),
+        ('runthrough play demo.tape.yml --no-watch', 'the same, with no browser'),
+        ('runthrough play demo.tape.yml --cast demo.cast', 'also an asciicast v2 file'),
+    ),
+)
+def play(
+    tape: Annotated[Path, typer.Argument(metavar='TAPE', help='A .tape.yml file, such as one library lists.')],
+    out: Annotated[Path | None, typer.Option('--out', metavar='PATH', help='Where to write the page.')] = None,
+    cast: Annotated[Path | None, typer.Option('--cast', metavar='PATH', help='Also write an asciicast v2 file.')] = None,
+    fps: Annotated[int, typer.Option('--fps', help='Screen samples per second.')] = 14,
+    watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
+) -> None:
+    """Record a tape again, to see its demo still works with today's tools."""
+    if not tape.is_file():
+        raise typer.BadParameter(f'no such tape: {tape}')
+    page = out or tape.with_suffix('').with_suffix('.html')
+    record(tape, page, cast_path=cast, fps=fps)
+    if watch:
+        open_page(page)
+
+
+@app.command(
+    rich_help_panel='Use what you kept',
     epilog=examples(
         ('runthrough library', 'every kept tape, and which have no page'),
         ('runthrough library --json', 'the same list as JSON, for a script'),
@@ -265,7 +278,7 @@ def library(
     path: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     as_json: Annotated[bool, typer.Option('--json', help='Output as JSON to stdout.')] = False,
 ) -> None:
-    """List the runthroughs you have recorded."""
+    """List the demos you kept, with the path to each tape."""
     recorded = []
     for tape in sorted(path.glob('*.tape.yml')):
         loaded = yaml.safe_load(tape.read_text()) or {}
@@ -296,7 +309,7 @@ def library(
 
 
 @app.command(
-    rich_help_panel='Manage',
+    rich_help_panel='Update',
     epilog=examples(
         ('runthrough update --check', 'whether a newer release exists'),
         ('runthrough update', 'install the newest release over this one'),
