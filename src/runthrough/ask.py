@@ -215,6 +215,15 @@ class ModelTimedOut(SystemExit):
     so `request_tape` lets this through instead of retrying it."""
 
 
+def claude_logged_in() -> bool | None:
+    """Whether `claude` holds a login or an API key, or None when its answer cannot be read."""
+    try:
+        result = subprocess.run(['claude', 'auth', 'status'], capture_output=True, text=True, timeout=20, check=False)
+        return bool(json.loads(result.stdout).get('loggedIn'))
+    except (OSError, subprocess.TimeoutExpired, ValueError, AttributeError):
+        return None
+
+
 def ask_model(prompt: str, timeout: int = 420) -> Reply:
     """The one door to the model. It is never given tools: it reads help text and
     probe output as plain text and returns a tape, and the recorder does the running."""

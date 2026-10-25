@@ -120,15 +120,22 @@ def open_page(path: Path) -> None:
     )
 
 
-def require_claude() -> None:
-    """Stop before any work when the CLI that writes the tape is missing. `investigate`
-    would otherwise run the routing commands first and then die in a traceback."""
+def preflight(cli: str | None = None, routing: config_module.Routing | None = None) -> None:
+    """Stop before any work, naming every missing prerequisite in one message."""
+    problems = []
     if shutil.which('claude') is None:
-        err.print(
-            'claude is not on PATH. ask and investigate write the tape through Claude Code. '
-            'Install it from https://code.claude.com/docs/en/setup, then run claude once to log in.',
-            soft_wrap=True,
+        problems.append(
+            'claude is not on PATH. ask and investigate write the tape through Claude Code.\n'
+            'Install it from https://code.claude.com/docs/en/setup, then run: claude auth login'
         )
+    elif ask_module.claude_logged_in() is False:
+        problems.append('claude is installed but not logged in. Run: claude auth login\nSetting ANTHROPIC_API_KEY works too.')
+    if cli is not None and shutil.which(cli) is None:
+        problems.append(f'{cli} is not installed, so there is no help to read. --cli takes a command on your PATH.')
+    if routing is not None and not routing.configured:
+        problems.append(config_module.ROUTING_HELP.format(path=config_module.CONFIG_PATH))
+    if problems:
+        err.print('\n\n'.join(problems), markup=False, highlight=False, soft_wrap=True)
         raise typer.Exit(1)
 
 
@@ -178,10 +185,7 @@ def ask(
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Demo one command: Claude reads its --help, writes a tape, and you record it."""
-    require_claude()
-    if shutil.which(cli) is None:
-        raise typer.BadParameter(f'{cli} is not installed')
-
+    preflight(cli=cli)
     asked = ' '.join(question)
     err.print(f'reading {cli} help')
     help_text = ask_module.gather_help(cli, budget)
@@ -209,12 +213,9 @@ def investigate(
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Demo a question that spans tools: it picks the tools, writes a tape, and you record it."""
-    require_claude()
-    asked = ' '.join(question)
     routing = config_module.load().routing
-    if not routing.configured:
-        err.print(config_module.ROUTING_HELP.format(path=config_module.CONFIG_PATH))
-        raise typer.Exit(1)
+    preflight(routing=routing)
+    asked = ' '.join(question)
 
     err.print('routing')
     paths = investigate_module.route(asked, routing)
