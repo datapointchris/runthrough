@@ -6,6 +6,7 @@ import importlib.metadata
 import json
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -51,9 +52,9 @@ app = typer.Typer(
         '4. The tape, page and .cast file are kept in ~/.local/share/runthrough/.\n'
         '\n'
         'Later:\n'
-        'runthrough library                    list every demo you kept\n'
-        'runthrough play <path>.tape.yml       record a kept tape again, against\n'
-        "                                      today's tools, to see it still works\n"
+        'runthrough library                    list every demo you kept, numbered\n'
+        'runthrough play                       pick a demo, run it again, watch it\n'
+        'runthrough play 2                     the same, for demo 2 in library\n'
         'runthrough investigate "<question>"   a demo across several tools; needs\n'
         '                                      routing set in\n'
         '                                      ~/.config/runthrough/config.yml\n'
@@ -160,7 +161,65 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
     if watch:
         open_page(page_path)
     err.print(f'tape kept at {tape_path}')
+    name = tape.get('name') or slug
+    err.print(f'play it again with:  runthrough play {shlex.quote(str(name).lower())}', markup=False, highlight=False)
     return page_path
+
+
+def kept_tapes(library: Path) -> list[dict]:
+    """Every tape in the library, in the order `library` numbers them."""
+    kept = []
+    for tape in sorted(library.glob('*.tape.yml')):
+        loaded = yaml.safe_load(tape.read_text()) or {}
+        page = tape.with_name(tape.name.replace('.tape.yml', '.html'))
+        kept.append(
+            {
+                'name': str(loaded.get('name') or tape.name.removesuffix('.tape.yml')),
+                'title': loaded.get('title', ''),
+                'tags': loaded.get('tags', []),
+                'steps': len(loaded.get('steps', [])),
+                'tape': str(tape),
+                'page': str(page) if page.exists() else None,
+            }
+        )
+    return kept
+
+
+def print_numbered(kept: list[dict]) -> None:
+    for number, entry in enumerate(kept, 1):
+        mark = '' if entry['page'] else '  (never recorded)'
+        print(f'{number:>3}  {entry["name"]}  —  {entry["title"]}{mark}')
+    sys.stdout.flush()
+
+
+def stem(entry: dict) -> str:
+    return Path(entry['tape']).name.removesuffix('.tape.yml')
+
+
+def choose_tape(given: str | None, library: Path) -> Path:
+    """Read a tape path, a number from `library`, or any part of a kept tape's name."""
+    if given and Path(given).expanduser().is_file():
+        return Path(given).expanduser()
+    kept = kept_tapes(library)
+    if not kept:
+        err.print(f'No demos kept in {library} yet. Make one with:  runthrough ask --cli git "what changed"', markup=False)
+        raise typer.Exit(1)
+    if given is None:
+        print_numbered(kept)
+        if not sys.stdin.isatty():
+            err.print('Name one:  runthrough play <number or name>', markup=False)
+            raise typer.Exit(1)
+        given = input('play which? ').strip()
+    if given.isdigit() and 1 <= int(given) <= len(kept):
+        return Path(kept[int(given) - 1]['tape'])
+    wanted = given.lower()
+    exact = [e for e in kept if wanted in (e['name'].lower(), stem(e))]
+    matches = exact or [e for e in kept if wanted in e['name'].lower() or wanted in stem(e)]
+    if len(matches) == 1:
+        return Path(matches[0]['tape'])
+    err.print(f'{"Several" if matches else "No"} kept demos match "{given}". Pick one by number:', markup=False)
+    print_numbered(kept)
+    raise typer.Exit(1)
 
 
 @app.command(
@@ -247,21 +306,24 @@ def investigate(
 @app.command(
     rich_help_panel='Use what you kept',
     epilog=examples(
-        ('runthrough play demo.tape.yml', 'record demo.html and open it'),
-        ('runthrough play demo.tape.yml --no-watch', 'the same, with no browser'),
-        ('runthrough play demo.tape.yml --cast demo.cast', 'also an asciicast v2 file'),
+        ('runthrough play', 'list your demos and pick one'),
+        ('runthrough play 2', 'the second demo library lists'),
+        ('runthrough play trace a symbol', 'any part of a demo name'),
+        ('runthrough play demo.tape.yml --no-watch', 'a tape file, with no browser'),
     ),
 )
 def play(
-    tape: Annotated[Path, typer.Argument(metavar='TAPE', help='A .tape.yml file, such as one library lists.')],
+    which: Annotated[
+        list[str] | None, typer.Argument(metavar='[DEMO...]', help='A number or name from library, or a tape file. Leave out to pick.')
+    ] = None,
     out: Annotated[Path | None, typer.Option('--out', metavar='PATH', help='Where to write the page.')] = None,
     cast: Annotated[Path | None, typer.Option('--cast', metavar='PATH', help='Also write an asciicast v2 file.')] = None,
     fps: Annotated[int, typer.Option('--fps', help='Screen samples per second.')] = 14,
+    library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
-    """Record a tape again, to see its demo still works with today's tools."""
-    if not tape.is_file():
-        raise typer.BadParameter(f'no such tape: {tape}')
+    """Run a demo's commands again and open the new recording."""
+    tape = choose_tape(' '.join(which) if which else None, library)
     page = out or tape.with_suffix('').with_suffix('.html')
     record(tape, page, cast_path=cast, fps=fps)
     if watch:
@@ -279,34 +341,19 @@ def library(
     path: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     as_json: Annotated[bool, typer.Option('--json', help='Output as JSON to stdout.')] = False,
 ) -> None:
-    """List the demos you kept, with the path to each tape."""
-    recorded = []
-    for tape in sorted(path.glob('*.tape.yml')):
-        loaded = yaml.safe_load(tape.read_text()) or {}
-        page = tape.with_name(tape.name.replace('.tape.yml', '.html'))
-        recorded.append(
-            {
-                'name': loaded.get('name', tape.stem),
-                'title': loaded.get('title', ''),
-                'tags': loaded.get('tags', []),
-                'steps': len(loaded.get('steps', [])),
-                'tape': str(tape),
-                'page': str(page) if page.exists() else None,
-            }
-        )
-
+    """List the demos you kept, numbered for play."""
+    recorded = kept_tapes(path)
     if as_json:
         print(json.dumps(recorded))
         return
 
     if not recorded:
-        err.print(f'Nothing recorded yet in {path}.')
-        err.print('Record one with:  runthrough ask --cli <command> "what you want shown"')
+        err.print(f'Nothing recorded yet in {path}.', markup=False)
+        err.print('Record one with:  runthrough ask --cli <command> "what you want shown"', markup=False)
         return
 
-    for entry in recorded:
-        mark = '' if entry['page'] else '  (no recording)'
-        print(f'{entry["name"]}  —  {entry["title"]}{mark}')
+    print_numbered(recorded)
+    err.print('\nPlay one with:  runthrough play <number or name>', markup=False)
 
 
 @app.command(

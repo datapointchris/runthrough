@@ -44,8 +44,8 @@ Three programs sit outside the install:
 ```bash
 cd path/to/any/git/repo                                      # every step runs in the directory you start in
 runthrough ask --cli git "what changed and who changed it"   # reads git's help, prints a tape, records only on y
-runthrough play ~/.local/share/runthrough/what-changed-and-who-changed-it.tape.yml   # the kept tape, run again
-runthrough library                                           # every kept tape; "(no recording)" marks one with no page
+runthrough library                                           # every kept demo, numbered
+runthrough play                                              # pick one from that list, run it again, watch it
 ```
 
 `ask` prints the tape it wrote to stderr, then asks `record this? [y/N]`. Any answer but `y` writes
@@ -71,6 +71,7 @@ hand.
 ## `play` — the tape is the source, and the page is a build artifact
 
 ```bash
+runthrough play 2                                # demo 2 in library; any part of a demo's name works too
 runthrough play demo.tape.yml                    # runs each step in a pty, writes demo.html beside it, opens it
 runthrough play demo.tape.yml --no-watch         # the same, with no browser
 runthrough play demo.tape.yml --cast demo.cast   # also an asciicast v2 file, for any asciicast player
