@@ -45,15 +45,15 @@ Three programs sit outside the install:
 cd path/to/any/git/repo                                      # every step runs in the directory you start in
 runthrough ask --cli git "what changed and who changed it"   # reads git's help, prints a tape, records only on y
 runthrough library                                           # every kept demo, numbered
-runthrough play                                              # pick one from that list, run it again, watch it
+runthrough play 1                                            # watch demo 1 again
 ```
 
 `ask` prints the tape it wrote to stderr, then asks `record this? [y/N]`. Any answer but `y` writes
 nothing. A `y` writes three files into `~/.local/share/runthrough/`, each named from the question:
 the tape, the page and an asciicast. The page opens when the recording ends.
 
-`play` is the drift check. It runs the kept tape against the `git` installed today, and a renamed
-flag shows up on the screen as git's own error.
+`play` opens the page already recorded. `play --refresh` is the drift check. It runs the kept tape
+against the `git` installed today, and a renamed flag shows up on the screen as git's own error.
 
 A tape needs no model, and `play` never calls one. The `play` section below shows a tape written by
 hand.
@@ -64,17 +64,17 @@ hand.
 | --- | --- | --- |
 | How do I show this with one command | `ask --cli <command>` | that command's `--help`, walked down its subcommands |
 | How would I answer this across my tools | `investigate` | the two routing commands, the chosen tools' help, and the output of a few probe commands |
-| Does this demo still hold after a release | `play` | the tape, and whatever its commands print now |
+| Does this demo still hold after a release | `play --refresh` | the tape, and whatever its commands print now |
 | What have I recorded | `library` | the `*.tape.yml` files in `~/.local/share/runthrough/` |
 | Is a newer release out | `update --check` | the project's GitHub releases |
 
 ## `play` — the tape is the source, and the page is a build artifact
 
 ```bash
-runthrough play 2                                # demo 2 in library; any part of a demo's name works too
-runthrough play demo.tape.yml                    # runs each step in a pty, writes demo.html beside it, opens it
-runthrough play demo.tape.yml --no-watch         # the same, with no browser
-runthrough play demo.tape.yml --cast demo.cast   # also an asciicast v2 file, for any asciicast player
+runthrough play 2                                # opens demo 2's page; any part of a demo's name works too
+runthrough play 2 --refresh                      # runs each step in a pty again, rewrites the page, opens it
+runthrough play demo.tape.yml                    # a tape with no page yet is recorded first, beside the tape
+runthrough play demo.tape.yml --cast demo.cast   # records, and also writes an asciicast v2 file
 ```
 
 A tape is YAML. This one records against any git repository with three commits:

@@ -53,8 +53,8 @@ app = typer.Typer(
         '\n'
         'Later:\n'
         'runthrough library                    list every demo you kept, numbered\n'
-        'runthrough play                       pick a demo, run it again, watch it\n'
-        'runthrough play 2                     the same, for demo 2 in library\n'
+        'runthrough play 2                     watch demo 2 from library\n'
+        'runthrough play 2 --refresh           run its commands again, then watch\n'
         'runthrough investigate "<question>"   a demo across several tools; needs\n'
         '                                      routing set in\n'
         '                                      ~/.config/runthrough/config.yml\n'
@@ -162,7 +162,7 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
         open_page(page_path)
     err.print(f'tape kept at {tape_path}')
     name = tape.get('name') or slug
-    err.print(f'play it again with:  runthrough play {shlex.quote(str(name).lower())}', markup=False, highlight=False)
+    err.print(f'watch it again with:  runthrough play {shlex.quote(str(name).lower())}', markup=False, highlight=False)
     return page_path
 
 
@@ -306,26 +306,28 @@ def investigate(
 @app.command(
     rich_help_panel='Use what you kept',
     epilog=examples(
+        ('runthrough play 2', 'watch demo 2 from library'),
+        ('runthrough play trace', 'watch the demo whose name has "trace"'),
         ('runthrough play', 'list your demos and pick one'),
-        ('runthrough play 2', 'the second demo library lists'),
-        ('runthrough play trace a symbol', 'any part of a demo name'),
-        ('runthrough play demo.tape.yml --no-watch', 'a tape file, with no browser'),
+        ('runthrough play 2 --refresh', 'run its commands again, then watch'),
     ),
 )
 def play(
     which: Annotated[
         list[str] | None, typer.Argument(metavar='[DEMO...]', help='A number or name from library, or a tape file. Leave out to pick.')
     ] = None,
-    out: Annotated[Path | None, typer.Option('--out', metavar='PATH', help='Where to write the page.')] = None,
-    cast: Annotated[Path | None, typer.Option('--cast', metavar='PATH', help='Also write an asciicast v2 file.')] = None,
-    fps: Annotated[int, typer.Option('--fps', help='Screen samples per second.')] = 14,
+    refresh: Annotated[bool, typer.Option('--refresh', help="Run the demo's commands again and record a new page first.")] = False,
+    out: Annotated[Path | None, typer.Option('--out', metavar='PATH', help='Where the page is.')] = None,
+    cast: Annotated[Path | None, typer.Option('--cast', metavar='PATH', help='Also write an asciicast v2 file. Records.')] = None,
+    fps: Annotated[int, typer.Option('--fps', help='Screen samples per second, when recording.')] = 14,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
-    watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
+    watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page.')] = True,
 ) -> None:
-    """Run a demo's commands again and open the new recording."""
+    """Watch a demo you kept. --refresh records it again first."""
     tape = choose_tape(' '.join(which) if which else None, library)
     page = out or tape.with_suffix('').with_suffix('.html')
-    record(tape, page, cast_path=cast, fps=fps)
+    if refresh or cast is not None or not page.exists():
+        record(tape, page, cast_path=cast, fps=fps)
     if watch:
         open_page(page)
 
@@ -353,7 +355,7 @@ def library(
         return
 
     print_numbered(recorded)
-    err.print('\nPlay one with:  runthrough play <number or name>', markup=False)
+    err.print('\nWatch one with:  runthrough play <number>', markup=False)
 
 
 @app.command(
