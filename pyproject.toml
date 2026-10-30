@@ -37,6 +37,11 @@ style = "semver"
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 
+# Nothing here imports brotli. fontTools loads it by name to save the
+# recorder's font subset with the woff2 flavor, and fails at save time without it.
+[tool.deptry.per_rule_ignores]
+DEP002 = ["brotli"]
+
 [tool.forge]
 # Keys the shared toolchain standard owns, written by its generator.
 # Dropping one from the template removes it here on the next sync; a key absent
