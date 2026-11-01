@@ -66,7 +66,7 @@ hand.
 | How would I answer this across my tools | `investigate` | the two routing commands, the chosen tools' help, and the output of a few probe commands |
 | Does this demo still hold after a release | `play --refresh` | the tape, and whatever its commands print now |
 | What have I recorded | `library` | the `*.tape.yml` files in `~/.local/share/runthrough/` |
-| Is a newer release out | `update --check` | the project's GitHub releases |
+| Is a newer release out | `update --check` | the package index the tool was installed from |
 
 ## `play` — the tape is the source, and the page is a build artifact
 

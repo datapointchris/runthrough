@@ -318,7 +318,9 @@ def play(
     ] = None,
     refresh: Annotated[bool, typer.Option('--refresh', help="Run the demo's commands again and record a new page first.")] = False,
     out: Annotated[Path | None, typer.Option('--out', metavar='PATH', help='Where the page is.')] = None,
-    cast: Annotated[Path | None, typer.Option('--cast', metavar='PATH', help='Also write an asciicast v2 file. Records.')] = None,
+    cast: Annotated[
+        Path | None, typer.Option('--cast', metavar='PATH', help='Run the tape again and also write an asciicast v2 file there.')
+    ] = None,
     fps: Annotated[int, typer.Option('--fps', help='Screen samples per second, when recording.')] = 14,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page.')] = True,
