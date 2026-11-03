@@ -51,7 +51,7 @@ app = typer.Typer(
         '   Each command runs, and the page opens in your browser.\n'
         '4. The tape, page and .cast file are kept in ~/.local/share/runthrough/.\n'
         '\n'
-        'Later:\n'
+        'Examples:\n'
         'runthrough library                    list every demo you kept, numbered\n'
         'runthrough play 2                     watch demo 2 from library\n'
         'runthrough play 2 --refresh           run its commands again, then watch\n'
