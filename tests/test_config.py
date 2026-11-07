@@ -99,6 +99,15 @@ class TestRouting:
         assert config.Routing().search_command('anything') is None
 
 
+class TestDataHome:
+    def test_the_library_lives_under_xdg_data_home_with_the_standard_fallback(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('XDG_DATA_HOME', str(tmp_path / 'data'))
+        assert config.xdg_data_home() == tmp_path / 'data'
+        monkeypatch.setenv('HOME', str(tmp_path))
+        monkeypatch.setenv('XDG_DATA_HOME', '')
+        assert config.xdg_data_home() == tmp_path / '.local' / 'share'
+
+
 class TestLoad:
     def test_a_missing_file_is_an_empty_config_rather_than_an_error(self, tmp_path):
         loaded = config.load(tmp_path / 'nope.yml')

@@ -18,7 +18,11 @@ import yaml
 
 
 def xdg_config_home() -> Path:
-    return Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
+    return Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
+
+
+def xdg_data_home() -> Path:
+    return Path(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local' / 'share')
 
 
 CONFIG_PATH = xdg_config_home() / 'runthrough' / 'config.yml'

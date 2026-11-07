@@ -49,7 +49,8 @@ runthrough play 1                                            # watch demo 1 agai
 ```
 
 `ask` prints the tape it wrote to stderr, then asks `record this? [y/N]`. Any answer but `y` writes
-nothing. A `y` writes three files into `~/.local/share/runthrough/`, each named from the question:
+nothing. A `y` writes three files into `$XDG_DATA_HOME/runthrough/`, which is
+`~/.local/share/runthrough/` by default, each named from the question:
 the tape, the page and an asciicast. The page opens when the recording ends.
 
 `play` opens the page already recorded. `play --refresh` is the drift check. It runs the kept tape
@@ -65,7 +66,7 @@ hand.
 | How do I show this with one command | `ask --cli <command>` | that command's `--help`, walked down its subcommands |
 | How would I answer this across my tools | `investigate` | the two routing commands, the chosen tools' help, and the output of a few probe commands |
 | Does this demo still hold after a release | `play --refresh` | the tape, and whatever its commands print now |
-| What have I recorded | `library` | the `*.tape.yml` files in `~/.local/share/runthrough/` |
+| What have I recorded | `library` | the `*.tape.yml` files in `$XDG_DATA_HOME/runthrough/` |
 | Is a newer release out | `update --check` | the package index the tool was installed from |
 
 ## `play` — the tape is the source, and the page is a build artifact
@@ -221,8 +222,9 @@ requested, it shows the last frame and no animation.
 
 ## Where it writes
 
-- `ask` and `investigate` keep each tape, page and asciicast in `~/.local/share/runthrough/`. Their
-  `--library` names another directory, and `library --library` reads it.
+- `ask` and `investigate` keep each tape, page and asciicast in `$XDG_DATA_HOME/runthrough/`, which
+  is `~/.local/share/runthrough/` by default. Their `--library` names another directory, and
+  `library --library` reads it.
 - `play` writes the page beside the tape, or at `--out`. It writes an asciicast only with `--cast`.
 - A tape with `sandbox: xdg` gets a `sandbox/` directory beside its page.
 - The update check records when it last ran under `$XDG_STATE_HOME/runthrough/`, which is

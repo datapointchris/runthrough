@@ -49,7 +49,8 @@ app = typer.Typer(
         "   Claude reads git's --help and prints a tape. Nothing has run yet.\n"
         '3. Answer y to "record this? \\[y/N]".\n'
         '   Each command runs, and the page opens in your browser.\n'
-        '4. The tape, page and .cast file are kept in ~/.local/share/runthrough/.\n'
+        '4. The tape, page and .cast file are kept in $XDG_DATA_HOME/runthrough/,\n'
+        '   which is ~/.local/share/runthrough/ by default.\n'
         '\n'
         'Examples:\n'
         'runthrough ask --cli git "<question>"   record a demo of one tool\n'
@@ -66,7 +67,7 @@ app = typer.Typer(
 )
 err = Console(stderr=True)
 
-DEFAULT_LIBRARY = Path.home() / '.local/share/runthrough'
+DEFAULT_LIBRARY = config_module.xdg_data_home() / 'runthrough'
 
 # One config for `update` and the notice, so the notice never names a release `update` would not install.
 UPDATE_CONFIG = Config(tool='runthrough', owner='datapointchris')
