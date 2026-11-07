@@ -2,6 +2,10 @@
 
 Universal rules live in `~/.claude/CLAUDE.md`. `README.md` carries the design reasoning.
 
+`task setup` makes a fresh checkout runnable and installs the hooks. `task test`, `task lint`
+(ruff and mypy, writing nothing) and `task format` are the everyday jobs. `task install` puts this
+checkout in place of the released uv tool. `task --list` shows the rest.
+
 **This repo is public, and it names nothing private** (⚠️ MANDATORY): no private tool name, no
 hostname, no machine layout, no internal directory — not in source, not in tests, not in help
 text, not in a fixture. It went public once carrying three of them plus a pointer to an internal
