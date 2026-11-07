@@ -397,7 +397,11 @@ def library(
 def update(
     check_only: Annotated[bool, typer.Option('--check', help='Report whether an update is available without installing it.')] = False,
 ) -> None:
-    """Update runthrough to the latest GitHub release."""
+    """Update runthrough to the newest release published on GitHub.
+
+    The release installs from the source runthrough came from: the package index
+    uv recorded at install, or the git repository at the release's tag.
+    """
     run_update(UPDATE_CONFIG, check_only=check_only)
 
 
