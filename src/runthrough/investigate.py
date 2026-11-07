@@ -24,6 +24,8 @@ from runthrough.ask import ask_model
 from runthrough.ask import file_redirect
 from runthrough.ask import request_tape
 from runthrough.ask import strip_ansi
+from runthrough.errors import GuardRefused
+from runthrough.errors import ModelFailed
 
 READ_COMMANDS = {
     'awk',
@@ -292,7 +294,7 @@ def route(question: str, routing: config_module.Routing) -> list[str]:
     raw = ask_model(prompt).text
     match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
-        raise SystemExit(f'router did not return a list:\n{raw}')
+        raise ModelFailed(f'router did not return a list:\n{raw}')
     return [str(item) for item in json.loads(match.group(0))]
 
 
@@ -327,7 +329,7 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
     for command in json.loads(match.group(0))[:3]:
         try:
             check_command(command, allowed)
-        except SystemExit as refusal:
+        except GuardRefused as refusal:
             print(f'  skipped probe ({refusal})', file=sys.stderr)
             continue
         print(f'  probing: {command}', file=sys.stderr)
@@ -427,27 +429,27 @@ def segments(command: str) -> list[str]:
 
 def check_command(command: str, allowed: set[str]) -> None:
     if len(command) > 160:
-        raise SystemExit(f'too long to be typed by hand ({len(command)} chars): {command}')
+        raise GuardRefused(f'too long to be typed by hand ({len(command)} chars): {command}')
     if FORBIDDEN.search(command):
-        raise SystemExit(f'not something a person types inline: {command}')
+        raise GuardRefused(f'not something a person types inline: {command}')
     if redirect := file_redirect(command):
-        raise SystemExit(f'refusing a redirect that writes a file ({redirect}): {command}')
+        raise GuardRefused(f'refusing a redirect that writes a file ({redirect}): {command}')
     if len(split_pipeline(re.sub(r'\$\(.*?\)', ' ', command))) > 4:
-        raise SystemExit(f'too many pipe stages: {command}')
+        raise GuardRefused(f'too many pipe stages: {command}')
 
     for segment in segments(command):
         try:
             words = shlex.split(segment)
         except ValueError:
-            raise SystemExit(f'unbalanced quoting: {command}') from None
+            raise GuardRefused(f'unbalanced quoting: {command}') from None
         if not words:
             continue
         if words[0] in SHELL_KEYWORDS:
-            raise SystemExit(f'not something a person types inline: {command}')
+            raise GuardRefused(f'not something a person types inline: {command}')
         if words[0] not in allowed:
-            raise SystemExit(f'command not in the read-only allowlist: {words[0]}')
+            raise GuardRefused(f'command not in the read-only allowlist: {words[0]}')
         if writer := writing_argument(words):
-            raise SystemExit(f'refusing {writer}, which lets {words[0]} write a file or run a command: {command}')
+            raise GuardRefused(f'refusing {writer}, which lets {words[0]} write a file or run a command: {command}')
         if words[0] in READ_COMMANDS:
             # A read command takes patterns and paths, never a subcommand, so a verb
             # among them is data: `rg deploy src/` searches for the word.
@@ -458,4 +460,4 @@ def check_command(command: str, allowed: set[str]) -> None:
             if word.startswith('-'):
                 break
             if word.lower() in MUTATING_WORDS:
-                raise SystemExit(f'refusing a mutating verb ({word}) in: {command}')
+                raise GuardRefused(f'refusing a mutating verb ({word}) in: {command}')

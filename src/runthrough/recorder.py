@@ -31,6 +31,7 @@ import pyte
 import yaml
 
 from runthrough import config as config_module
+from runthrough.errors import StepTimedOut
 
 PROMPT = '\x1b[32m❯\x1b[0m '
 
@@ -396,7 +397,7 @@ def execute_in_pty(
         with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
         process.wait()
-        raise SystemExit(f'step still running after {deadline:.0f}s, so the recording stopped: {command}')
+        raise StepTimedOut(f'step still running after {deadline:.0f}s, so the recording stopped: {command}')
     return events
 
 

@@ -8,6 +8,7 @@ from runthrough.ask import extract_subcommands
 from runthrough.ask import parse_tape
 from runthrough.ask import strip_ansi
 from runthrough.ask import strip_fences
+from runthrough.errors import ModelFailed
 from runthrough.recorder import mix
 
 RICH_HELP = """\
@@ -44,7 +45,7 @@ class TestParseTape:
         assert tape['name'] == 'A'
 
     def test_missing_json_is_an_error_naming_what_came_back(self):
-        with pytest.raises(SystemExit, match='did not return a tape'):
+        with pytest.raises(ModelFailed, match='did not return a tape'):
             parse_tape('I cannot do that.')
 
 

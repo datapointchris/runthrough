@@ -14,6 +14,10 @@ import sys
 import textwrap
 from typing import NamedTuple
 
+from runthrough.errors import GuardRefused
+from runthrough.errors import ModelFailed
+from runthrough.errors import ModelTimedOut
+
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 COMMAND_HEADING = re.compile(r'(Available Commands:|Commands\s*$|Commands\s*[─╮])')
 SUBCOMMAND = re.compile(r'^[│|]?\s{0,4}([a-z][a-z0-9-]{1,30})\s{2,}\S')
@@ -216,11 +220,6 @@ def primary_model(usage: object) -> str:
     return str((entry or {}).get('canonicalModel') or name)
 
 
-class ModelTimedOut(SystemExit):
-    """`claude` ran past its deadline. Asking again would wait as long a second time,
-    so `request_tape` lets this through instead of retrying it."""
-
-
 def claude_logged_in() -> bool | None:
     """Whether `claude` holds a login or an API key, or None when its answer cannot be read."""
     try:
@@ -248,9 +247,9 @@ def ask_model(prompt: str, timeout: int = 420) -> Reply:
     # Searched from the end, because nothing promises the result stays the last frame.
     frame = next((f for f in reversed(printed) if f.get('type') == 'result'), None)
     if frame is None:
-        raise SystemExit(f'claude failed: {result.stderr.strip() or result.stdout.strip()[:400]}')
+        raise ModelFailed(f'claude failed: {result.stderr.strip() or result.stdout.strip()[:400]}')
     if result.returncode != 0 or frame.get('is_error') or frame.get('subtype') != 'success':
-        raise SystemExit(f'claude failed: {frame.get("result") or frame.get("subtype") or result.stderr.strip()}')
+        raise ModelFailed(f'claude failed: {frame.get("result") or frame.get("subtype") or result.stderr.strip()}')
     init = next((f for f in printed if f.get('type') == 'system' and f.get('subtype') == 'init'), {})
     return Reply(
         text=str(frame.get('result') or '').strip(),
@@ -271,7 +270,7 @@ def request_tape(prompt: str) -> dict:
         tape = parse_tape(reply.text)
     except ModelTimedOut:
         raise
-    except SystemExit:
+    except ModelFailed:
         print('  no JSON in the reply, asking again', file=sys.stderr)
         reply = ask_model(prompt + NUDGE)
         tape = parse_tape(reply.text)
@@ -292,7 +291,7 @@ def parse_tape(raw: str) -> dict:
     what YAML would read as a plain scalar, and the tape fails to load."""
     match = re.search(r'\{.*\}', strip_fences(raw), re.DOTALL)
     if not match:
-        raise SystemExit(f'model did not return a tape:\n{raw[:400]}')
+        raise ModelFailed(f'model did not return a tape:\n{raw[:400]}')
     return json.loads(match.group(0))
 
 
@@ -309,14 +308,14 @@ def file_redirect(command: str) -> str | None:
 
 def validate_tape(tape: dict, cli: str) -> dict:
     if 'steps' not in tape:
-        raise SystemExit('model did not return a tape')
+        raise ModelFailed('model did not return a tape')
 
     for step in tape['steps']:
         command = step.get('run', '')
         if CHAINING.search(command):
-            raise SystemExit(f'refusing chained command: {command}')
+            raise GuardRefused(f'refusing chained command: {command}')
         if redirect := file_redirect(command):
-            raise SystemExit(f'refusing a redirect that writes a file ({redirect}): {command}')
+            raise GuardRefused(f'refusing a redirect that writes a file ({redirect}): {command}')
         if command.split()[:1] != [cli]:
-            raise SystemExit(f'refusing command that is not {cli}: {command}')
+            raise GuardRefused(f'refusing command that is not {cli}: {command}')
     return tape

@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from runthrough import ask
+from runthrough.errors import ModelFailed
 
 TAPE = '{"name": "A Tape", "steps": [{"run": "notes status", "pause": 1.0}]}'
 CLOSING_REMARK = 'The tape JSON above was the deliverable; the work is complete.'
@@ -57,6 +58,6 @@ class TestRequestTape:
 
     def test_two_bad_replies_give_up_rather_than_loop(self, replies):
         prompts = replies(CLOSING_REMARK, CLOSING_REMARK)
-        with pytest.raises(SystemExit, match='did not return a tape'):
+        with pytest.raises(ModelFailed, match='did not return a tape'):
             ask.request_tape('go')
         assert len(prompts) == 2

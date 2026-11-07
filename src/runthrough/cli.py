@@ -23,6 +23,7 @@ from rich.console import Console
 from runthrough import ask as ask_module
 from runthrough import config as config_module
 from runthrough import investigate as investigate_module
+from runthrough.errors import RunthroughError
 from runthrough.recorder import record
 
 
@@ -382,6 +383,9 @@ def main() -> None:
         app()
     except KeyboardInterrupt:
         sys.exit(130)
+    except RunthroughError as fault:
+        err.print(str(fault), markup=False, highlight=False, soft_wrap=True)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 
+from runthrough.errors import GuardRefused
 from runthrough.investigate import READ_COMMANDS
 from runthrough.investigate import check_command
 from runthrough.investigate import segments
@@ -72,7 +73,7 @@ class TestCheckCommand:
         check_command('deploy runs list --verb apply', ALLOWED)
 
     def test_rejects_a_mutating_subcommand(self):
-        with pytest.raises(SystemExit, match='mutating verb'):
+        with pytest.raises(GuardRefused, match='mutating verb'):
             check_command('deploy apply production', ALLOWED)
 
     @pytest.mark.parametrize(
@@ -98,25 +99,25 @@ class TestCheckCommand:
         ],
     )
     def test_rejects_what_a_person_would_not_type_inline(self, command):
-        with pytest.raises(SystemExit):
+        with pytest.raises(GuardRefused):
             check_command(command, ALLOWED)
 
     def test_rejects_a_loop(self):
-        with pytest.raises(SystemExit, match='not something a person types'):
+        with pytest.raises(GuardRefused, match='not something a person types'):
             check_command('for f in *.json do jq . $f done', ALLOWED)
 
     def test_rejects_a_command_outside_the_allowlist(self):
-        with pytest.raises(SystemExit, match='allowlist'):
+        with pytest.raises(GuardRefused, match='allowlist'):
             check_command('curl https://example.com', ALLOWED)
 
     def test_checks_every_stage_not_only_the_first(self):
-        with pytest.raises(SystemExit, match='allowlist'):
+        with pytest.raises(GuardRefused, match='allowlist'):
             check_command('deploy runs list | xargs rm', ALLOWED)
 
     def test_rejects_too_many_stages(self):
-        with pytest.raises(SystemExit, match='pipe stages'):
+        with pytest.raises(GuardRefused, match='pipe stages'):
             check_command('cat a | sort | uniq | head | wc -l', ALLOWED)
 
     def test_rejects_something_too_long_to_type(self):
-        with pytest.raises(SystemExit, match='too long'):
+        with pytest.raises(GuardRefused, match='too long'):
             check_command('notes search "' + 'x' * 200 + '"', ALLOWED)
