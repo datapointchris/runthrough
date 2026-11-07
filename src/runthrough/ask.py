@@ -150,29 +150,6 @@ NUDGE = (
     'the work is complete — the JSON is the only thing read.'
 )
 
-# What the model may not do, as a deny list because an allow list does not
-# restrict anything: `claude -p --allowedTools ""` runs Bash regardless, since
-# that flag pre-approves tools rather than confining the session to them.
-#
-# Every built-in is here because this session needs none of them. It is handed
-# help text and probe output on stdin and returns a tape; the recorder is what
-# runs commands, behind check_command, after a person has read the tape. A model
-# that could reach the machine itself would be running commands nobody approved,
-# and would make the guard on the recorder beside the point.
-DENIED_TOOLS = (
-    'Bash',
-    'Read',
-    'Write',
-    'Edit',
-    'NotebookEdit',
-    'Glob',
-    'Grep',
-    'WebFetch',
-    'WebSearch',
-    'Task',
-    'TodoWrite',
-)
-
 
 class Reply(NamedTuple):
     text: str
@@ -181,8 +158,37 @@ class Reply(NamedTuple):
 
 
 def model_argv() -> list[str]:
-    # --verbose fixes the output as one array of frames, whatever the user's config says.
-    return ['claude', '-p', '--output-format', 'json', '--verbose', '--disallowed-tools', ','.join(DENIED_TOOLS)]
+    """The whole confinement, stated in argv so it is the same on every machine.
+
+    The session is handed help text and probe output on stdin and returns a tape.
+    The recorder runs commands, behind check_command, after a person has read the
+    tape, so the model needs no tool, and one that could reach the machine would
+    run commands nobody approved.
+
+    - `--tools ""` gives the session no tool at all. `--allowed-tools` would only
+      pre-approve tools and leave the rest reachable.
+    - `--setting-sources ""` loads no settings file, so none can grant a tool back.
+    - `--permission-prompts none` refuses anything outside that, rather than waiting.
+    - `--safe-mode` keeps the user's CLAUDE.md, skills, hooks and MCP servers out of
+      a call that answers only from what it is handed.
+    - `--verbose` fixes the output as one array of frames, whatever the user's config says.
+    """
+    return [
+        'claude',
+        '-p',
+        '--safe-mode',
+        '--setting-sources',
+        '',
+        '--output-format',
+        'json',
+        '--verbose',
+        '--permission-mode',
+        'default',
+        '--permission-prompts',
+        'none',
+        '--tools',
+        '',
+    ]
 
 
 def frames(stdout: str) -> list[dict[str, object]]:

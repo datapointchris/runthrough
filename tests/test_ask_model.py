@@ -1,8 +1,9 @@
 """The argv is the whole confinement, so it is asserted rather than trusted.
 
-An allow list does not restrict a session — `claude -p --allowedTools ""` runs Bash
-regardless, because that flag pre-approves tools instead of confining the session to
-them. Only a deny list keeps the model to reading its stdin and returning a tape.
+`--tools ""` leaves the session no tool, `--setting-sources ""` lets no settings file
+grant one back, and `--permission-prompts none` refuses anything else rather than
+waiting. `--allowed-tools` confines nothing, because it pre-approves tools and leaves
+the rest reachable.
 """
 
 from __future__ import annotations
@@ -31,20 +32,18 @@ def recorded_argv(monkeypatch):
     return seen['argv']
 
 
-class TestModelArgv:
-    def test_the_session_is_confined_by_a_deny_list(self, recorded_argv):
-        assert '--disallowed-tools' in recorded_argv
+def flag(argv: list[str], name: str) -> str:
+    return argv[argv.index(name) + 1]
 
-    def test_an_allow_list_is_never_what_confines_it(self, recorded_argv):
-        assert '--allowedTools' not in recorded_argv
+
+class TestModelArgv:
+    def test_the_session_has_no_tool_and_no_settings_file_grants_one(self, recorded_argv):
+        assert recorded_argv[:2] == ['claude', '-p']
+        assert flag(recorded_argv, '--tools') == ''
+        assert flag(recorded_argv, '--setting-sources') == ''
+        assert flag(recorded_argv, '--permission-prompts') == 'none'
+        assert '--safe-mode' in recorded_argv
         assert '--allowed-tools' not in recorded_argv
 
-    def test_every_tool_that_reaches_the_machine_is_denied(self, recorded_argv):
-        denied = set(recorded_argv[recorded_argv.index('--disallowed-tools') + 1].split(','))
-        assert {'Bash', 'Read', 'Write', 'Edit', 'NotebookEdit', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Task'} <= denied
-
-    def test_the_flag_carries_its_list_as_the_next_argument(self, recorded_argv):
-        assert recorded_argv[recorded_argv.index('--disallowed-tools') + 1] == ','.join(ask.DENIED_TOOLS)
-
-    def test_it_is_a_headless_claude_call(self, recorded_argv):
-        assert recorded_argv[:2] == ['claude', '-p']
+    def test_the_prompt_never_reaches_argv(self, recorded_argv):
+        assert 'a prompt' not in recorded_argv

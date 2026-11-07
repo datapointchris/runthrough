@@ -128,9 +128,10 @@ the output, and passing that to a second command. That ordering is a sentence. I
 in `--help`.
 
 So the division is strict. The model reads help and writes JSON. It gets no tools. The `claude`
-call denies each built-in tool by name, so the model cannot read a file or run a command. That list
-is a deny list because `--allowedTools` pre-approves tools and leaves the rest reachable. The
-recorder executes, and only after the tape passes a guard.
+call passes `--tools ""` and loads no settings file, so the model cannot read a file or run a
+command, and nothing in the machine's own Claude Code settings can grant it one. It also runs in
+safe mode, so the user's instructions, skills and hooks stay out of the call. The recorder
+executes, and only after the tape passes a guard.
 
 `ask`'s guard holds each step to one invocation of the named command. It refuses a pipe, `;`, `&`,
 a backtick and `$(`. It refuses a redirect that writes a file, with or without a descriptor number,

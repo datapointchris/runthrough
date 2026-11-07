@@ -29,14 +29,21 @@ patch up a frame after capture. The moment a recording can lie, the library stop
 drift check and becomes documentation that rots.
 
 **The model gets no tools** (⚠️ MANDATORY): every `claude -p` call goes through `ask_model`
-in `ask.py` and denies every built-in with `--disallowed-tools`. The boundary is named here
-because an effect with one door is where a timeout, error translation and a test stub attach
-once, and an undocumented door is one a future change walks straight past. Widening it to let
-the model explore would remove the only structural reason the guard is trustworthy.
+in `ask.py`, whose argv comes from `model_argv`. The boundary is named here because an effect
+with one door is where a timeout, error translation and a test stub attach once, and an
+undocumented door is one a future change walks straight past. Widening it to let the model
+explore would remove the only structural reason the guard is trustworthy.
 
-The list is a deny list because an allow list does not confine a session: `--allowedTools`
-pre-approves tools and leaves the rest reachable, so a session passed an empty allow list runs
-Bash anyway. A tool added to the CLI's built-in set is a tool this list does not yet name.
+argv states the whole confinement, so it is the same on every machine and a test asserts it
+without a model call:
+
+- `--tools ""` gives the session no tool. `--allowed-tools` is never the confinement: it
+  pre-approves tools and leaves the rest reachable.
+- `--setting-sources ""` loads no settings file, so a machine's own settings cannot grant a tool
+  back. A deny list fails there, because a settings file that allows a tool outranks it.
+- `--permission-prompts none` refuses anything outside the list rather than waiting.
+- `--safe-mode` keeps the user's CLAUDE.md, skills, hooks and MCP servers out of a call that
+  answers only from its stdin.
 
 **Every shell command line runs through `run_shell` in `investigate.py`**: the two routing
 commands from the config and each probe that passed `check_command`. A timeout or error
