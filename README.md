@@ -25,6 +25,16 @@ runthrough update --check                                                  # whe
 Name the index on the install: without it uv asks PyPI, which does not carry runthrough. uv records
 the index beside the tool, which is where `runthrough update` reads it back.
 
+Without access to that index, install from the source. Every dependency comes from PyPI:
+
+```bash
+uv tool install git+https://github.com/datapointchris/runthrough   # the latest commit on main
+uv tool install .                                                   # from a checkout of this repository
+```
+
+Upgrade such an install by running the same command again with `--reinstall`. `runthrough update`
+refuses it, as below.
+
 `runthrough update` reinstalls the newest release over the running one. It refuses an install from
 a local checkout or from a branch, because neither carries a release version to compare. Every
 other command checks for a newer release at most once a day, and names one it finds in a line on
