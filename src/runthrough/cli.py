@@ -74,8 +74,9 @@ UPDATE_CONFIG = Config(tool='runthrough', owner='datapointchris')
 
 
 def installed_commit() -> str | None:
-    """Read the git commit from the installed dist-info. uv records it for any git
-    install, which is how this tool is normally installed."""
+    """Read the git commit from the installed dist-info's direct_url.json. uv records
+    one for an install from git. An install from a package index records none, so
+    `--version` then prints the release alone."""
     try:
         distribution = importlib.metadata.distribution('runthrough')
         direct_url = distribution.read_text('direct_url.json')

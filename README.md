@@ -18,7 +18,7 @@ Python 3.13 or later.
 
 ```bash
 uv tool install --index https://pypi.ichrisbirch.com/simple/ runthrough   # the newest release
-runthrough --version                                                       # the release, and the commit it was built from
+runthrough --version                                                       # the release, and its commit on a git install
 runthrough update --check                                                  # whether a newer release exists
 ```
 
