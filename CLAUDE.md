@@ -38,6 +38,17 @@ The list is a deny list because an allow list does not confine a session: `--all
 pre-approves tools and leaves the rest reachable, so a session passed an empty allow list runs
 Bash anyway. A tool added to the CLI's built-in set is a tool this list does not yet name.
 
+**Every shell command line runs through `run_shell` in `investigate.py`**: the two routing
+commands from the config and each probe that passed `check_command`. A timeout or error
+translation for them changes there once. The direct process calls outside the two doors are
+named, and nothing else spawns a process:
+
+- `recorder.py` runs each tape step under a pty through `subprocess.Popen`, because the screen is
+  read from the terminal it drives.
+- `open_page` in `cli.py` starts the system opener detached, and waits for nothing.
+- `run_help` and `claude_logged_in` in `ask.py`, and `resolve_font_file`'s `fc-match` in
+  `recorder.py`, run a fixed argv with no shell.
+
 **Every command `investigate` generates passes `check_command` before it runs**, and every step
 `ask` writes passes `validate_tape`. What the code gets right that was a bug first, each pinned
 by a test:

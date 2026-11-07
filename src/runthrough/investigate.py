@@ -239,10 +239,11 @@ TAPE_SCHEMA = """\
 }"""
 
 
-def run_configured(command: str, timeout: int = 60) -> str:
-    """Run one of the two routing commands this machine supplies. Shell, because a
-    person writes these into their own config and will reach for a pipe."""
-    result = subprocess.run(
+def run_shell(command: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+    """The one door for a shell command line: the routing commands from the user's
+    config, and the probe commands that passed `check_command`. Shell, because both
+    carry pipes a person writes. Its timeout and error handling live here once."""
+    return subprocess.run(
         command,
         shell=True,
         capture_output=True,
@@ -250,7 +251,11 @@ def run_configured(command: str, timeout: int = 60) -> str:
         timeout=timeout,
         check=False,
     )
-    return strip_ansi(result.stdout)
+
+
+def run_configured(command: str, timeout: int = 60) -> str:
+    """Run one of the two routing commands this machine supplies."""
+    return strip_ansi(run_shell(command, timeout).stdout)
 
 
 def registry_roster(routing: config_module.Routing) -> str:
@@ -326,14 +331,7 @@ def probe(question: str, help_text: str, allowed: set[str]) -> str:
             print(f'  skipped probe ({refusal})', file=sys.stderr)
             continue
         print(f'  probing: {command}', file=sys.stderr)
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
+        result = run_shell(command)
         output = strip_ansi(result.stdout or result.stderr)[:1500]
         observations.append(f'$ {command}\n{output.rstrip()}')
     return '\n\n'.join(observations)
