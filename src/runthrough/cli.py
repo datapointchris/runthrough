@@ -144,6 +144,25 @@ def preflight(cli: str | None = None, routing: config_module.Routing | None = No
         raise typer.Exit(1)
 
 
+def must_confirm(yes: bool, no_input: bool) -> bool:
+    """Whether to ask "record this?" before recording, settled before any model call.
+
+    A prompt runs only on a terminal. Off one, or under --no-input, nobody can answer it,
+    so the command stops at once as a usage error naming the flag that answers it."""
+    if yes:
+        return False
+    if no_input or not sys.stdin.isatty():
+        err.print(
+            'Recording waits for an answer to "record this?", and with --no-input or no terminal on stdin '
+            'nobody can give it. Pass --yes (-y) to record without asking.',
+            markup=False,
+            highlight=False,
+            soft_wrap=True,
+        )
+        raise typer.Exit(2)
+    return True
+
+
 def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')[:48]
 
@@ -242,12 +261,14 @@ def ask(
             '--sandbox', help='For a demo that writes: point the XDG roots at sandbox/ beside the page, which is kept between recordings.'
         ),
     ] = False,
-    yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
+    yes: Annotated[bool, typer.Option('--yes', '-y', help='Record without confirming the tape.')] = False,
+    no_input: Annotated[bool, typer.Option('--no-input', help='Never prompt. Without --yes, stop before any work.')] = False,
     budget: Annotated[int, typer.Option('--budget', help='Help-text characters to read.')] = 40000,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Demo one command: Claude reads its --help, writes a tape, and you record it."""
+    confirm = must_confirm(yes, no_input)
     preflight(cli=cli)
     asked = ' '.join(question)
     err.print(f'reading {cli} help')
@@ -258,7 +279,7 @@ def ask(
     if sandbox:
         tape['sandbox'] = 'xdg'
 
-    produce(tape, asked, library, confirm=not yes, watch=watch)
+    produce(tape, asked, library, confirm=confirm, watch=watch)
 
 
 @app.command(
@@ -270,12 +291,14 @@ def ask(
 )
 def investigate(
     question: Annotated[list[str], typer.Argument(metavar='QUESTION...', help='What you want answered, in English.')],
-    yes: Annotated[bool, typer.Option('--yes', help='Record without confirming the tape.')] = False,
+    yes: Annotated[bool, typer.Option('--yes', '-y', help='Record without confirming the tape.')] = False,
+    no_input: Annotated[bool, typer.Option('--no-input', help='Never prompt. Without --yes, stop before any work.')] = False,
     budget: Annotated[int, typer.Option('--budget', help='Help-text characters to read.')] = 30000,
     library: Annotated[Path, typer.Option('--library', help='Where tapes are kept.')] = DEFAULT_LIBRARY,
     watch: Annotated[bool, typer.Option('--watch/--no-watch', help='Open the page when done.')] = True,
 ) -> None:
     """Demo a question that spans tools: it picks the tools, writes a tape, and you record it."""
+    confirm = must_confirm(yes, no_input)
     routing = config_module.load().routing
     preflight(routing=routing)
     asked = ' '.join(question)
@@ -304,7 +327,7 @@ def investigate(
     for step in tape['steps']:
         investigate_module.check_command(step['run'], allowed)
 
-    produce(tape, asked, library, confirm=not yes, watch=watch)
+    produce(tape, asked, library, confirm=confirm, watch=watch)
 
 
 @app.command(
