@@ -3,15 +3,64 @@
 The include-following cases are the ones that matter. A generated theme reaches
 the terminal through `config-file` includes, so a parser that does not follow them
 silently records in fallback colours and nothing looks broken.
+
+The config module is also the one place that reads the machine's settings, and a
+walk over the package holds every other module to it.
 """
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
+import runthrough
 from runthrough import config
 from runthrough.recorder import load_terminal_font
 from runthrough.recorder import load_terminal_theme
+
+PACKAGE = Path(runthrough.__file__).parent
+
+
+def is_environ(node: ast.AST) -> bool:
+    return (isinstance(node, ast.Attribute) and node.attr == 'environ') or (isinstance(node, ast.Name) and node.id == 'environ')
+
+
+def reads_a_setting(node: ast.AST) -> bool:
+    """`os.environ[...]`, `os.environ.get`, `getenv` or `Path.home()`: every way a module
+    looks a machine's value up for itself."""
+    if isinstance(node, ast.Subscript):
+        return is_environ(node.value)
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id == 'getenv'
+    if not isinstance(func, ast.Attribute):
+        return False
+    if func.attr == 'getenv' or (func.attr == 'get' and is_environ(func.value)):
+        return True
+    return func.attr == 'home' and isinstance(func.value, ast.Name) and func.value.id == 'Path'
+
+
+def setting_reads() -> list[str]:
+    found = []
+    for path in sorted(PACKAGE.rglob('*.py')):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Subscript | ast.Call) and reads_a_setting(node):
+                found.append(f'{path.relative_to(PACKAGE)}:{node.lineno}')
+    return found
+
+
+def test_only_the_config_module_reads_the_machines_settings():
+    """A path or command name a module looks up for itself is a machine's specifics
+    written into the source, which the tool must take from its config. The config
+    module's own reads are asserted too, so a walk that finds nothing cannot pass."""
+    reads = setting_reads()
+
+    assert any(read.startswith('config.py:') for read in reads), 'the walk found no read at all, so it proves nothing'
+    assert [read for read in reads if not read.startswith('config.py:')] == []
 
 
 @pytest.fixture
