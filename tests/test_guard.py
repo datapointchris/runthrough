@@ -142,3 +142,21 @@ class TestValidateTape:
 
     def test_accepts_help_as_a_flag_value(self):
         validate_tape({'steps': [{'run': 'deploy runs list --name help'}]}, 'deploy')
+
+    # Every accepted step runs through a shell, so each refusal is the only
+    # thing between a model's reply and an arbitrary command line.
+    @pytest.mark.parametrize(
+        ('command', 'reason'),
+        [
+            ('deploy runs; rm x', 'chained'),
+            ('deploy runs && rm x', 'chained'),
+            ('deploy $(id)', 'chained'),
+            ('deploy runs > out.txt', 'redirect'),
+            ('deploy runs 2>out.txt', 'redirect'),
+            ('rm -rf /tmp/x', 'not deploy'),
+        ],
+    )
+    def test_rejects_a_step_the_shell_would_run_as_something_else(self, command, reason):
+        tape = {'steps': [{'run': 'deploy runs list'}, {'run': command}]}
+        with pytest.raises(GuardRefused, match=reason):
+            validate_tape(tape, 'deploy')
