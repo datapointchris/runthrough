@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 import typer
+from typer.core import TyperCommand
 from typer.core import TyperGroup
 
 from runthrough import cli
@@ -25,7 +26,7 @@ SHELL_FENCE = re.compile(r'^```(?:bash|sh)\n(.*?)^```', re.MULTILINE | re.DOTALL
 PRINTED_IN_FENCE = re.compile(rf'^runthrough{WORDS}', re.MULTILINE)
 
 
-def visible_leaves(command, path: str) -> list[tuple[str, object]]:
+def visible_leaves(command, path: str) -> list[tuple[str, TyperCommand]]:
     if command.hidden:
         return []
     if isinstance(command, TyperGroup):

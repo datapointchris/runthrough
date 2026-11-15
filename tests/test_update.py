@@ -1,5 +1,6 @@
 """`runthrough update` and the update notice share one pyselfupdate config."""
 
+from pyselfupdate import Config
 from typer.testing import CliRunner
 
 from runthrough import cli
@@ -21,7 +22,7 @@ def test_update_installs_the_published_release(monkeypatch):
 
 def test_update_does_not_also_print_the_update_notice(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, 'run_update', lambda config, **kwargs: None)
-    notices = []
+    notices: list[Config] = []
     monkeypatch.setattr(cli, 'notify', notices.append)
 
     runner.invoke(cli.app, ['update'])
