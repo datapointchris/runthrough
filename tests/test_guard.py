@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 
+from runthrough.ask import validate_tape
 from runthrough.errors import GuardRefused
 from runthrough.investigate import READ_COMMANDS
 from runthrough.investigate import check_command
@@ -121,3 +122,23 @@ class TestCheckCommand:
     def test_rejects_something_too_long_to_type(self):
         with pytest.raises(GuardRefused, match='too long'):
             check_command('notes search "' + 'x' * 200 + '"', ALLOWED)
+
+    @pytest.mark.parametrize('command', ['deploy runs --help', 'deploy runs -h', 'deploy help runs', 'rg --help'])
+    def test_rejects_reading_help_as_the_investigation(self, command):
+        with pytest.raises(GuardRefused, match='prints help'):
+            check_command(command, ALLOWED)
+
+    @pytest.mark.parametrize('command', ['df -h', 'rg help notes.txt', 'deploy runs list --name help'])
+    def test_accepts_help_as_a_flag_or_value_of_something_else(self, command):
+        check_command(command, ALLOWED)
+
+
+class TestValidateTape:
+    @pytest.mark.parametrize('command', ['deploy runs --help', 'deploy -h', 'deploy help runs'])
+    def test_rejects_a_step_that_prints_help(self, command):
+        tape = {'steps': [{'run': 'deploy runs list'}, {'run': command}]}
+        with pytest.raises(GuardRefused, match='prints help'):
+            validate_tape(tape, 'deploy')
+
+    def test_accepts_help_as_a_flag_value(self):
+        validate_tape({'steps': [{'run': 'deploy runs list --name help'}]}, 'deploy')

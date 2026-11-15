@@ -124,6 +124,8 @@ def author_tape(cli: str, question: str, help_text: str, force_sandbox: bool) ->
 
         Below is the complete help output for `{cli}`. Use ONLY commands, subcommands
         and flags that appear in it — never invent one, never guess a flag.
+        That help is for you to read. No step runs --help, -h or a help subcommand:
+        the demo shows the commands that do the thing, never where to read about it.
 
         Rules:
         - 2 to 4 steps. Each `run` is ONE invocation of `{cli}`. No pipes, no
@@ -306,6 +308,24 @@ def file_redirect(command: str) -> str | None:
     return None
 
 
+def help_request(words: list[str]) -> str | None:
+    """The help flag or `help` subcommand in a tool's invocation, if it has one.
+
+    The help text is the model's reference, gathered before it writes anything. A
+    step that prints it shows the viewer where to look rather than how to do the
+    thing, so a recording made of one answers nothing."""
+    for word in words[1:]:
+        if word in ('--help', '-h'):
+            return word
+    for word in words[1:]:
+        # Only the subcommand path: `--name help` is a value, not a request.
+        if word.startswith('-'):
+            break
+        if word == 'help':
+            return word
+    return None
+
+
 def validate_tape(tape: dict, cli: str) -> dict:
     if 'steps' not in tape:
         raise ModelFailed('model did not return a tape')
@@ -318,4 +338,6 @@ def validate_tape(tape: dict, cli: str) -> dict:
             raise GuardRefused(f'refusing a redirect that writes a file ({redirect}): {command}')
         if command.split()[:1] != [cli]:
             raise GuardRefused(f'refusing command that is not {cli}: {command}')
+        if asked := help_request(command.split()):
+            raise GuardRefused(f'refusing a step that prints help ({asked}) instead of doing the task: {command}')
     return tape

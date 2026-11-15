@@ -22,6 +22,7 @@ from collections.abc import Callable
 from runthrough import config as config_module
 from runthrough.ask import ask_model
 from runthrough.ask import file_redirect
+from runthrough.ask import help_request
 from runthrough.ask import request_tape
 from runthrough.ask import strip_ansi
 from runthrough.errors import GuardRefused
@@ -347,7 +348,9 @@ def author(question: str, help_text: str, observations: str) -> dict:
             {question}
 
         Below is the help output for the relevant tools. Use ONLY commands, flags and
-        subcommands that appear in it.
+        subcommands that appear in it. That help is for you to read. No step runs
+        --help, -h or a help subcommand: the recording shows the investigation itself,
+        never where to read about it.
 
         The recording teaches someone how to do this themselves, so every command must
         be one a person would realistically type:
@@ -452,8 +455,13 @@ def check_command(command: str, allowed: set[str]) -> None:
             raise GuardRefused(f'refusing {writer}, which lets {words[0]} write a file or run a command: {command}')
         if words[0] in READ_COMMANDS:
             # A read command takes patterns and paths, never a subcommand, so a verb
-            # among them is data: `rg deploy src/` searches for the word.
+            # among them is data: `rg deploy src/` searches for the word. Its `-h` is
+            # often something else too, as in `df -h` and `sort -h`.
+            if '--help' in words:
+                raise GuardRefused(f'refusing a command that prints help instead of investigating: {command}')
             continue
+        if asked := help_request(words):
+            raise GuardRefused(f'refusing a command that prints help ({asked}) instead of investigating: {command}')
         for word in words[1:]:
             # Only the subcommand path is checked. `--verb apply` is a filter value,
             # not an apply, and blocking it would rule out most report queries.
