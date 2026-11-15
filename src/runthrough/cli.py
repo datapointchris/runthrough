@@ -397,10 +397,11 @@ def library(
 def update(
     check_only: Annotated[bool, typer.Option('--check', help='Report whether an update is available without installing it.')] = False,
 ) -> None:
-    """Update runthrough to the newest release published on GitHub.
+    """Update runthrough to the newest release its install source offers.
 
-    The release installs from the source runthrough came from: the package index
-    uv recorded at install, or the git repository at the release's tag.
+    An install from a package index takes the newest version that index serves,
+    read from the index uv recorded at install. A git install takes the newest
+    release published on GitHub, installed from the repository at its tag.
     """
     run_update(UPDATE_CONFIG, check_only=check_only)
 
