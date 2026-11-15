@@ -81,6 +81,8 @@ original pipe bug reintroduced, because it asserted on the helper rather than th
 carries colons and quotes that a YAML plain scalar cannot hold; that was a real parse failure
 in both authoring paths. The saved tape is YAML because it is read by people.
 
-**Test by recording.** A change to the recorder is verified by producing a page and looking at
-it, not by unit tests alone — the failure modes are visual: a blank opening frame, a font that
-did not load, an animation that never advances. `--no-watch` keeps that scriptable.
+**Test by recording.** `tests/test_record.py` records a tape of real commands through `record`
+and checks that each step's output reaches the page and the asciicast, and that a step past its
+deadline stops the recording. The visual failure modes need a look as well, so a change to the
+recorder is also verified by producing a page and watching it: a blank opening frame, a font
+that did not load, an animation that never advances. `--no-watch` keeps that scriptable.
