@@ -167,6 +167,11 @@ def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')[:48]
 
 
+def page_for(tape_path: Path) -> Path:
+    """The page recorded from a tape sits beside it: `demo.tape.yml` becomes `demo.html`."""
+    return tape_path.with_suffix('').with_suffix('.html')
+
+
 def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool) -> Path:
     body = yaml.safe_dump(tape, sort_keys=False, width=88, allow_unicode=True)
     err.print(body)
@@ -177,7 +182,7 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
     library.mkdir(parents=True, exist_ok=True)
     slug = slugify(question)
     tape_path = library / f'{slug}.tape.yml'
-    page_path = library / f'{slug}.html'
+    page_path = page_for(tape_path)
     tape_path.write_text(body)
 
     record(tape_path, page_path, cast_path=page_path.with_suffix('.cast'))
@@ -194,7 +199,7 @@ def kept_tapes(library: Path) -> list[dict]:
     kept = []
     for tape in sorted(library.glob('*.tape.yml')):
         loaded = yaml.safe_load(tape.read_text()) or {}
-        page = tape.with_name(tape.name.replace('.tape.yml', '.html'))
+        page = page_for(tape)
         kept.append(
             {
                 'name': str(loaded.get('name') or tape.name.removesuffix('.tape.yml')),
@@ -354,7 +359,7 @@ def play(
 ) -> None:
     """Watch a demo you kept. --refresh records it again first."""
     tape = choose_tape(' '.join(which) if which else None, library)
-    page = out or tape.with_suffix('').with_suffix('.html')
+    page = out or page_for(tape)
     if refresh or cast is not None or not page.exists():
         record(tape, page, cast_path=cast, fps=fps)
     if watch:

@@ -37,6 +37,9 @@ PROMPT = '\x1b[32m❯\x1b[0m '
 
 ANSI_NAMES = ('black', 'red', 'green', 'brown', 'blue', 'magenta', 'cyan', 'white')
 
+# pyte names SGR color 3 brown, where most themes and styles call it yellow.
+ANSI_ALIASES = {'yellow': 'brown'}
+
 
 def load_terminal_theme(settings: dict[str, list[str]]) -> tuple[dict[str, str], str, str, list[str]]:
     """Take the palette from the terminal's own config, so a recording looks like the
@@ -51,7 +54,8 @@ def load_terminal_theme(settings: dict[str, list[str]]) -> tuple[dict[str, str],
     background = (settings.get('background') or ['#191b22'])[-1]
     ansi = [swatches.get(index, foreground) for index in range(16)]
     palette = {name: ansi[index] for index, name in enumerate(ANSI_NAMES)}
-    palette['yellow'] = palette['brown']
+    for alias, name in ANSI_ALIASES.items():
+        palette[alias] = palette[name]
     return palette, foreground, background, ansi
 
 
@@ -509,8 +513,8 @@ def resolve_colors(character) -> tuple[str, str]:
 def to_hex(color: str, fallback: str, bold: bool) -> str:
     if color == 'default':
         return fallback
-    if color in ANSI_NAMES or color == 'yellow':
-        name = 'brown' if color == 'yellow' else color
+    name = ANSI_ALIASES.get(color, color)
+    if name in ANSI_NAMES:
         index = ANSI_NAMES.index(name)
         return ANSI[index + 8] if bold else ANSI[index]
     color = PYTE_256_TO_THEME.get(color, color)
