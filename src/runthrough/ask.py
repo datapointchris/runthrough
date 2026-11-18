@@ -167,9 +167,9 @@ def model_argv() -> list[str]:
     """The whole confinement, stated in argv so it is the same on every machine.
 
     The session is handed help text and probe output on stdin and returns a tape.
-    The recorder runs commands, behind check_command, after a person has read the
-    tape, so the model needs no tool, and one that could reach the machine would
-    run commands nobody approved.
+    The recorder runs a written tape's steps only after its guard passes them:
+    validate_tape for `ask`, check_command for `investigate`. So the model needs
+    no tool, and one that could reach the machine would run commands no guard read.
 
     - `--tools ""` gives the session no tool at all. `--allowed-tools` would only
       pre-approve tools and leave the rest reachable.
