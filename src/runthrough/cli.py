@@ -167,6 +167,19 @@ def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')[:48]
 
 
+TAPE_SUFFIX = '.tape.yml'
+
+
+def tape_path_for(library: Path, slug: str) -> Path:
+    """Where the library keeps the tape named `slug`."""
+    return library / f'{slug}{TAPE_SUFFIX}'
+
+
+def tape_stem(tape_path: Path) -> str:
+    """The slug a kept tape is filed under: `demo.tape.yml` gives `demo`."""
+    return tape_path.name.removesuffix(TAPE_SUFFIX)
+
+
 def page_for(tape_path: Path) -> Path:
     """The page recorded from a tape sits beside it: `demo.tape.yml` becomes `demo.html`."""
     return tape_path.with_suffix('').with_suffix('.html')
@@ -181,7 +194,7 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
 
     library.mkdir(parents=True, exist_ok=True)
     slug = slugify(question)
-    tape_path = library / f'{slug}.tape.yml'
+    tape_path = tape_path_for(library, slug)
     page_path = page_for(tape_path)
     tape_path.write_text(body)
 
@@ -197,12 +210,12 @@ def produce(tape: dict, question: str, library: Path, confirm: bool, watch: bool
 def kept_tapes(library: Path) -> list[dict]:
     """Every tape in the library, in the order `library` numbers them."""
     kept = []
-    for tape in sorted(library.glob('*.tape.yml')):
+    for tape in sorted(library.glob(f'*{TAPE_SUFFIX}')):
         loaded = yaml.safe_load(tape.read_text()) or {}
         page = page_for(tape)
         kept.append(
             {
-                'name': str(loaded.get('name') or tape.name.removesuffix('.tape.yml')),
+                'name': str(loaded.get('name') or tape_stem(tape)),
                 'title': loaded.get('title', ''),
                 'tags': loaded.get('tags', []),
                 'steps': len(loaded.get('steps', [])),
@@ -221,7 +234,7 @@ def print_numbered(kept: list[dict]) -> None:
 
 
 def stem(entry: dict) -> str:
-    return Path(entry['tape']).name.removesuffix('.tape.yml')
+    return tape_stem(Path(entry['tape']))
 
 
 def choose_tape(given: str | None, library: Path) -> Path:
